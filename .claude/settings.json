@@ -1,0 +1,7 @@
+{
+  "enabledPlugins": {
+    "pm-execution@github-phuryn": true,
+    "pm-ai-shipping@github-phuryn": true,
+    "pm-product-discovery@github-phuryn": true
+  }
+}

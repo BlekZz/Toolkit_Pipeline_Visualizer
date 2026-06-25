@@ -1,0 +1,877 @@
+{
+  "schemaVersion": "1.0",
+  "metadata": {
+    "name": "Data Team Schedules",
+    "description": "Sample schedule data covering all V1 recurrence modes.",
+    "updatedAt": "2026-06-25T00:00:00+08:00"
+  },
+  "tagCatalog": {
+    "project": {
+      "purposes": ["reporting", "monitoring", "migration", "compliance", "ad-hoc-analysis", "operational-maintenance"],
+      "stakeholders": ["sales", "growth", "finance", "executive", "product", "ops"],
+      "lifecycles": ["planning", "active", "paused", "deprecated", "experimental"],
+      "priorityTiers": ["tier-1", "tier-2", "tier-3"]
+    },
+    "pipeline": {
+      "dataDomains": ["revenue", "acquisition", "retention", "finance", "ops", "product", "experimentation"],
+      "pipelineTypes": ["ingestion", "transform", "aggregation", "export", "reporting", "quality-check", "backfill"],
+      "reliabilityCriticality": ["blocking", "business-critical", "important", "best-effort", "experimental"]
+    },
+    "schedule": {
+      "urgencies": ["low", "medium", "high", "critical"],
+      "runTypes": ["automated", "manual", "semi-automated"],
+      "reviewStates": ["confirmed", "needs-review", "assumed", "deprecated"]
+    }
+  },
+  "projects": [
+    {
+      "id": "monthly-exec-reporting",
+      "name": "Monthly Executive Reporting",
+      "description": "Business-intent view for monthly executive reporting readiness.",
+      "timezone": "Asia/Taipei",
+      "tags": {
+        "purpose": ["reporting"],
+        "stakeholder": ["executive", "finance"],
+        "lifecycle": "active",
+        "priorityTier": "tier-1",
+        "projectOwner": ["analytics-lead"]
+      },
+      "pipelineRefs": [
+        { "pipelineId": "sales-mart", "role": "primary", "notes": "Feeds monthly revenue dashboard." },
+        { "pipelineId": "shared-dim-sync", "role": "dependency", "notes": "Dimension tables used by sales mart." },
+        { "pipelineId": "finance-kpi", "role": "primary", "notes": "KPI aggregations for executive dashboard." }
+      ]
+    },
+    {
+      "id": "ops-monitoring",
+      "name": "Ops Monitoring",
+      "description": "Operational health checks and data quality monitoring.",
+      "timezone": "Asia/Taipei",
+      "tags": {
+        "purpose": ["monitoring"],
+        "stakeholder": ["ops", "product"],
+        "lifecycle": "active",
+        "priorityTier": "tier-2",
+        "projectOwner": ["data-eng"]
+      },
+      "pipelineRefs": [
+        { "pipelineId": "quality-checks", "role": "primary" },
+        { "pipelineId": "shared-dim-sync", "role": "dependency", "notes": "Same dim sync pipeline reused here." }
+      ]
+    },
+    {
+      "id": "platform-backup",
+      "name": "Platform Backup & Recovery",
+      "description": "Database and filesystem backup operations for infrastructure reliability and disaster recovery.",
+      "timezone": "Asia/Taipei",
+      "tags": {
+        "purpose": ["operational-maintenance"],
+        "stakeholder": ["ops"],
+        "lifecycle": "active",
+        "priorityTier": "tier-1",
+        "projectOwner": ["infra-eng"]
+      },
+      "pipelineRefs": [
+        { "pipelineId": "postgres-full-backup", "role": "primary", "notes": "Primary database backup to S3." },
+        { "pipelineId": "redis-snapshot", "role": "primary", "notes": "Cache layer hourly snapshots." },
+        { "pipelineId": "file-archive", "role": "primary", "notes": "Application file incremental and monthly archives." }
+      ]
+    }
+  ],
+  "pipelines": [
+    {
+      "id": "sales-mart",
+      "name": "Sales Mart",
+      "description": "Builds and refreshes sales mart tables for reporting.",
+      "timezone": "Asia/Taipei",
+      "tags": {
+        "dataDomain": ["revenue"],
+        "pipelineType": ["transform", "reporting"],
+        "sourceSystem": ["warehouse"],
+        "targetSystem": ["mart", "dashboard"],
+        "pipelineOwner": ["data-eng"],
+        "escalationOwner": ["analytics-lead"],
+        "cadenceClass": ["weekly"],
+        "reliabilityCriticality": "business-critical",
+        "failureModeRisk": ["silent-failure", "delayed-output"]
+      },
+      "operationalChecklist": {
+        "hasFallback": false,
+        "hasBackup": true,
+        "backupNotes": "Warehouse snapshots retained for 30 days.",
+        "hasNotification": false,
+        "hasValidation": false,
+        "validationNotes": "Future: check latest partition date.",
+        "hasSilentFailureRisk": true,
+        "silentFailureNotes": "Dashboard may show stale values without visible error."
+      },
+      "dependencies": {
+        "upstreamPipelineIds": ["shared-dim-sync"],
+        "downstreamPipelineIds": []
+      },
+      "schedules": [
+        {
+          "id": "weekly-sales-refresh",
+          "title": "Weekly Sales Refresh",
+          "description": "Refresh weekly sales marts every Monday morning.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-06",
+            "time": "09:00",
+            "durationSeconds": 1800,
+            "recurrence": {
+              "mode": "simple",
+              "frequency": "weekly",
+              "interval": 1,
+              "byWeekday": ["MO"],
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["data-eng"],
+            "urgency": "high",
+            "runType": "automated",
+            "sourceType": ["cron"],
+            "reviewState": "confirmed",
+            "environmentScope": "production"
+          },
+          "operationalChecklist": {
+            "isBlocking": true,
+            "canRetry": true
+          },
+          "output": {
+            "outputDescription": "Weekly sales mart tables.",
+            "outputLocation": "warehouse.sales_mart.weekly_sales",
+            "outputFormat": "table",
+            "outputNamingPattern": "partition_date=YYYY-MM-DD",
+            "downstreamNotes": "Used by monthly executive reporting."
+          },
+          "needsReview": false
+        },
+        {
+          "id": "monthly-sales-summary",
+          "title": "Monthly Sales Summary",
+          "description": "Aggregate monthly summary on the 1st of each month.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-01",
+            "time": "06:00",
+            "durationSeconds": 3600,
+            "recurrence": {
+              "mode": "rrule",
+              "rrule": "FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=1",
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["analytics-lead"],
+            "urgency": "critical",
+            "runType": "automated",
+            "sourceType": ["airflow"],
+            "reviewState": "confirmed",
+            "environmentScope": "production"
+          },
+          "operationalChecklist": {
+            "isBlocking": true,
+            "requiresManualCheck": true,
+            "canRetry": false
+          },
+          "output": {
+            "outputDescription": "Monthly executive summary sheet.",
+            "outputLocation": "google-sheets://reports/monthly-exec",
+            "outputFormat": "sheet"
+          },
+          "needsReview": false
+        },
+        {
+          "id": "sales-mart-health-cron",
+          "title": "Sales Mart Health Check (Cron)",
+          "description": "Daily health check via cron to verify mart freshness.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-01",
+            "durationSeconds": 120,
+            "recurrence": {
+              "mode": "cron",
+              "cron": "0 8 * * 1-5",
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["data-eng"],
+            "urgency": "medium",
+            "runType": "automated",
+            "sourceType": ["cron"],
+            "reviewState": "confirmed",
+            "environmentScope": "production"
+          },
+          "needsReview": false
+        }
+      ]
+    },
+    {
+      "id": "shared-dim-sync",
+      "name": "Shared Dimension Sync",
+      "description": "Syncs shared dimension tables used by multiple projects. Intentionally referenced by both monthly-exec-reporting and ops-monitoring.",
+      "timezone": "Asia/Taipei",
+      "tags": {
+        "dataDomain": ["ops", "product"],
+        "pipelineType": ["ingestion", "transform"],
+        "sourceSystem": ["postgres"],
+        "targetSystem": ["warehouse"],
+        "pipelineOwner": ["data-eng"],
+        "cadenceClass": ["daily"],
+        "reliabilityCriticality": "blocking"
+      },
+      "operationalChecklist": {
+        "hasFallback": false,
+        "hasBackup": true,
+        "backupNotes": "Source Postgres has WAL enabled.",
+        "hasNotification": false,
+        "hasValidation": true,
+        "validationNotes": "Row count check after each run."
+      },
+      "dependencies": {
+        "upstreamPipelineIds": [],
+        "downstreamPipelineIds": ["sales-mart", "quality-checks"]
+      },
+      "schedules": [
+        {
+          "id": "dim-sync-daily",
+          "title": "Daily Dimension Sync",
+          "description": "Sync all dimension tables daily at 05:00.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-01",
+            "time": "05:00",
+            "durationSeconds": 600,
+            "recurrence": {
+              "mode": "simple",
+              "frequency": "daily",
+              "interval": 1,
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["data-eng"],
+            "urgency": "critical",
+            "runType": "automated",
+            "sourceType": ["airflow"],
+            "reviewState": "confirmed",
+            "environmentScope": "production"
+          },
+          "operationalChecklist": {
+            "isBlocking": true,
+            "canRetry": true
+          },
+          "needsReview": false
+        },
+        {
+          "id": "dim-sync-weekly-full",
+          "title": "Weekly Full Dimension Reload",
+          "description": "Full reload every Sunday to catch any missed incremental changes.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-05",
+            "time": "02:00",
+            "durationSeconds": 2400,
+            "recurrence": {
+              "mode": "rrule",
+              "rrule": "FREQ=WEEKLY;INTERVAL=1;BYDAY=SU",
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["data-eng"],
+            "urgency": "high",
+            "runType": "automated",
+            "sourceType": ["airflow"],
+            "reviewState": "confirmed",
+            "environmentScope": "production"
+          },
+          "needsReview": false
+        },
+        {
+          "id": "dim-sync-ad-hoc-migration",
+          "title": "Ad-hoc Schema Migration (One-time)",
+          "description": "One-time migration to add new columns to dim_customer.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "one_time",
+            "startDateTime": "2026-07-15T22:00:00+08:00",
+            "durationSeconds": 900
+          },
+          "tags": {
+            "owner": ["data-eng"],
+            "urgency": "high",
+            "runType": "manual",
+            "reviewState": "needs-review",
+            "environmentScope": "production"
+          },
+          "needsReview": true,
+          "assumptions": ["Downstream reads are safe to pause for 15 minutes.", "DBA approval obtained."]
+        }
+      ]
+    },
+    {
+      "id": "quality-checks",
+      "name": "Data Quality Checks",
+      "description": "Automated quality checks across key tables.",
+      "timezone": "Asia/Taipei",
+      "tags": {
+        "dataDomain": ["ops"],
+        "pipelineType": ["quality-check"],
+        "sourceSystem": ["warehouse"],
+        "targetSystem": ["notification"],
+        "pipelineOwner": ["data-eng"],
+        "cadenceClass": ["daily"],
+        "reliabilityCriticality": "important"
+      },
+      "operationalChecklist": {
+        "hasFallback": false,
+        "hasNotification": true,
+        "notificationNotes": "Slack #data-alerts on failure.",
+        "hasValidation": true
+      },
+      "dependencies": {
+        "upstreamPipelineIds": ["shared-dim-sync"],
+        "downstreamPipelineIds": []
+      },
+      "schedules": [
+        {
+          "id": "daily-row-count-check",
+          "title": "Daily Row Count Check",
+          "description": "Verify row counts on critical tables after daily sync.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-01",
+            "time": "06:30",
+            "durationSeconds": 180,
+            "recurrence": {
+              "mode": "cron",
+              "cron": "30 6 * * *",
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["data-eng"],
+            "urgency": "medium",
+            "runType": "automated",
+            "sourceType": ["script"],
+            "reviewState": "confirmed",
+            "environmentScope": "production"
+          },
+          "operationalChecklist": {
+            "hasNotification": true,
+            "canRetry": true
+          },
+          "needsReview": false
+        },
+        {
+          "id": "weekly-freshness-report",
+          "title": "Weekly Freshness Report",
+          "description": "Generate weekly data freshness report every Friday afternoon.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-03",
+            "time": "16:00",
+            "durationSeconds": 300,
+            "recurrence": {
+              "mode": "simple",
+              "frequency": "weekly",
+              "interval": 1,
+              "byWeekday": ["FR"],
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["data-eng"],
+            "urgency": "low",
+            "runType": "automated",
+            "sourceType": ["script"],
+            "reviewState": "confirmed",
+            "environmentScope": "production"
+          },
+          "needsReview": false
+        },
+        {
+          "id": "monthly-quality-audit",
+          "title": "Monthly Quality Audit",
+          "description": "Full quality audit on the last day of each month.",
+          "enabled": false,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-31",
+            "time": "23:00",
+            "durationSeconds": 1200,
+            "recurrence": {
+              "mode": "simple",
+              "frequency": "monthly",
+              "interval": 1,
+              "byMonthDay": -1,
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["analytics-lead"],
+            "urgency": "low",
+            "runType": "semi-automated",
+            "reviewState": "assumed"
+          },
+          "needsReview": true,
+          "assumptions": ["Last day of month is safe for long-running audits."]
+        }
+      ]
+    },
+    {
+      "id": "finance-kpi",
+      "name": "Finance KPI Pipeline",
+      "description": "Aggregates finance KPIs for executive dashboard. Only referenced by monthly-exec-reporting.",
+      "timezone": "Asia/Taipei",
+      "tags": {
+        "dataDomain": ["finance", "revenue"],
+        "pipelineType": ["aggregation", "reporting"],
+        "sourceSystem": ["warehouse"],
+        "targetSystem": ["dashboard"],
+        "pipelineOwner": ["analytics-lead"],
+        "cadenceClass": ["weekly", "monthly"],
+        "reliabilityCriticality": "business-critical"
+      },
+      "operationalChecklist": {
+        "hasFallback": false,
+        "hasBackup": true,
+        "backupNotes": "Source warehouse snapshots retained.",
+        "hasNotification": true,
+        "notificationNotes": "Slack #finance-alerts on failure.",
+        "hasValidation": false,
+        "hasSilentFailureRisk": true,
+        "silentFailureNotes": "KPI dashboard may show stale figures."
+      },
+      "dependencies": {
+        "upstreamPipelineIds": ["shared-dim-sync"],
+        "downstreamPipelineIds": []
+      },
+      "schedules": [
+        {
+          "id": "weekly-kpi-refresh",
+          "title": "Weekly KPI Refresh",
+          "description": "Refresh all finance KPIs every Wednesday morning.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-01",
+            "time": "07:00",
+            "durationSeconds": 900,
+            "recurrence": {
+              "mode": "simple",
+              "frequency": "weekly",
+              "interval": 1,
+              "byWeekday": ["WE"],
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["analytics-lead"],
+            "urgency": "high",
+            "runType": "automated",
+            "sourceType": ["airflow"],
+            "reviewState": "confirmed",
+            "environmentScope": "production"
+          },
+          "operationalChecklist": {
+            "isBlocking": false,
+            "canRetry": true
+          },
+          "needsReview": false
+        },
+        {
+          "id": "monthly-kpi-snapshot",
+          "title": "Monthly KPI Snapshot",
+          "description": "Full KPI snapshot on the 2nd of each month after dims are confirmed.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-02",
+            "time": "08:00",
+            "durationSeconds": 1800,
+            "recurrence": {
+              "mode": "rrule",
+              "rrule": "FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=2",
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["analytics-lead"],
+            "urgency": "critical",
+            "runType": "automated",
+            "sourceType": ["airflow"],
+            "reviewState": "confirmed",
+            "environmentScope": "production"
+          },
+          "operationalChecklist": {
+            "isBlocking": true,
+            "requiresManualCheck": true,
+            "canRetry": false
+          },
+          "needsReview": false
+        },
+        {
+          "id": "kpi-integrity-check",
+          "title": "KPI Integrity Check (Cron)",
+          "description": "Lightweight cron check every weekday to detect KPI drift.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-01",
+            "durationSeconds": 60,
+            "recurrence": {
+              "mode": "cron",
+              "cron": "0 9 * * 1-5",
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["analytics-lead"],
+            "urgency": "medium",
+            "runType": "automated",
+            "sourceType": ["cron"],
+            "reviewState": "confirmed",
+            "environmentScope": "production"
+          },
+          "needsReview": false
+        }
+      ]
+    },
+    {
+      "id": "postgres-full-backup",
+      "name": "PostgreSQL Full Backup",
+      "description": "Nightly full backups and weekly restore-verification of primary PostgreSQL databases to S3.",
+      "timezone": "Asia/Taipei",
+      "tags": {
+        "dataDomain": ["infrastructure"],
+        "pipelineType": ["backup"],
+        "sourceSystem": ["PostgreSQL"],
+        "targetSystem": ["S3"],
+        "pipelineOwner": ["infra-eng"],
+        "cadenceClass": ["daily"],
+        "reliabilityCriticality": "blocking"
+      },
+      "operationalChecklist": {
+        "hasFallback": false,
+        "hasBackup": true,
+        "backupNotes": "S3 versioning enabled; 90-day retention policy.",
+        "hasNotification": true,
+        "notificationNotes": "PagerDuty alert on backup failure.",
+        "hasValidation": true,
+        "validationNotes": "Checksum verification after S3 upload."
+      },
+      "schedules": [
+        {
+          "id": "pg-nightly-full",
+          "title": "Nightly Full Backup",
+          "description": "Full pg_dump of all databases at 01:00 daily.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-01",
+            "durationSeconds": 2700,
+            "recurrence": {
+              "mode": "cron",
+              "cron": "0 1 * * *",
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["infra-eng"],
+            "urgency": "critical",
+            "runType": "automated",
+            "reviewState": "confirmed",
+            "environmentScope": "production",
+            "maintenanceWindow": "nightly-01:00-04:00"
+          },
+          "operationalChecklist": { "isBlocking": false, "canRetry": true },
+          "needsReview": false
+        },
+        {
+          "id": "pg-weekly-verify",
+          "title": "Weekly Backup Verification",
+          "description": "Restore test to staging to verify backup integrity every Sunday at 03:00.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-05",
+            "time": "03:00",
+            "durationSeconds": 5400,
+            "recurrence": {
+              "mode": "rrule",
+              "rrule": "FREQ=WEEKLY;INTERVAL=1;BYDAY=SU",
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["infra-eng"],
+            "urgency": "high",
+            "runType": "automated",
+            "reviewState": "confirmed",
+            "environmentScope": "staging",
+            "maintenanceWindow": "nightly-01:00-04:00"
+          },
+          "needsReview": false
+        },
+        {
+          "id": "pg-monthly-rotation",
+          "title": "Monthly Backup Rotation",
+          "description": "Archive monthly snapshot and purge backups older than 90 days on the 1st.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-01",
+            "time": "04:00",
+            "durationSeconds": 900,
+            "recurrence": {
+              "mode": "simple",
+              "frequency": "monthly",
+              "interval": 1,
+              "byMonthDay": 1,
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["infra-eng"],
+            "urgency": "medium",
+            "runType": "automated",
+            "reviewState": "confirmed",
+            "environmentScope": "production"
+          },
+          "needsReview": false
+        }
+      ]
+    },
+    {
+      "id": "redis-snapshot",
+      "name": "Redis Snapshot",
+      "description": "Hourly Redis RDB snapshots to S3 with daily expiry cleanup and weekly integrity check.",
+      "timezone": "Asia/Taipei",
+      "tags": {
+        "dataDomain": ["infrastructure"],
+        "pipelineType": ["backup"],
+        "sourceSystem": ["Redis"],
+        "targetSystem": ["S3"],
+        "pipelineOwner": ["infra-eng"],
+        "cadenceClass": ["hourly"],
+        "reliabilityCriticality": "important"
+      },
+      "operationalChecklist": {
+        "hasFallback": true,
+        "fallbackNotes": "Redis AOF persistence enabled as secondary backup.",
+        "hasNotification": true,
+        "notificationNotes": "Slack #infra-alerts on snapshot failure.",
+        "hasValidation": false
+      },
+      "schedules": [
+        {
+          "id": "redis-hourly-snapshot",
+          "title": "Hourly Redis Snapshot",
+          "description": "Copy Redis RDB to S3 every hour.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-01",
+            "durationSeconds": 120,
+            "recurrence": {
+              "mode": "cron",
+              "cron": "0 * * * *",
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["infra-eng"],
+            "urgency": "high",
+            "runType": "automated",
+            "reviewState": "confirmed",
+            "environmentScope": "production"
+          },
+          "operationalChecklist": { "canRetry": true },
+          "needsReview": false
+        },
+        {
+          "id": "redis-daily-cleanup",
+          "title": "Daily Snapshot Cleanup",
+          "description": "Remove Redis snapshots older than 48 hours from S3.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-01",
+            "time": "05:30",
+            "durationSeconds": 180,
+            "recurrence": {
+              "mode": "simple",
+              "frequency": "daily",
+              "interval": 1,
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["infra-eng"],
+            "urgency": "low",
+            "runType": "automated",
+            "reviewState": "confirmed",
+            "environmentScope": "production"
+          },
+          "needsReview": false
+        },
+        {
+          "id": "redis-weekly-integrity",
+          "title": "Weekly Redis Integrity Check",
+          "description": "Validate Redis snapshot can be successfully restored every Wednesday.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-01",
+            "time": "06:00",
+            "durationSeconds": 600,
+            "recurrence": {
+              "mode": "rrule",
+              "rrule": "FREQ=WEEKLY;INTERVAL=1;BYDAY=WE",
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["infra-eng"],
+            "urgency": "medium",
+            "runType": "automated",
+            "reviewState": "confirmed",
+            "environmentScope": "staging"
+          },
+          "needsReview": false
+        }
+      ]
+    },
+    {
+      "id": "file-archive",
+      "name": "File Archive",
+      "description": "Daily incremental and monthly full archives of application data to S3 and SFTP cold storage.",
+      "timezone": "Asia/Taipei",
+      "tags": {
+        "dataDomain": ["infrastructure", "security"],
+        "pipelineType": ["archive"],
+        "sourceSystem": ["local"],
+        "targetSystem": ["S3", "SFTP"],
+        "pipelineOwner": ["infra-eng"],
+        "cadenceClass": ["daily", "monthly"],
+        "reliabilityCriticality": "important"
+      },
+      "operationalChecklist": {
+        "hasFallback": false,
+        "hasNotification": true,
+        "notificationNotes": "Slack #infra-alerts on archive failure.",
+        "hasValidation": true,
+        "validationNotes": "File count and size check after transfer."
+      },
+      "schedules": [
+        {
+          "id": "file-daily-incremental",
+          "title": "Daily Incremental Archive",
+          "description": "Incremental rsync of application data to S3 nightly.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-01",
+            "time": "02:30",
+            "durationSeconds": 1200,
+            "recurrence": {
+              "mode": "simple",
+              "frequency": "daily",
+              "interval": 1,
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["infra-eng"],
+            "urgency": "medium",
+            "runType": "automated",
+            "reviewState": "confirmed",
+            "environmentScope": "production",
+            "maintenanceWindow": "nightly-01:00-04:00"
+          },
+          "needsReview": false
+        },
+        {
+          "id": "file-monthly-full",
+          "title": "Monthly Full Archive",
+          "description": "Full archive to SFTP cold storage on the 1st of each month.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "recurring",
+            "startDate": "2026-07-01",
+            "time": "01:00",
+            "durationSeconds": 7200,
+            "recurrence": {
+              "mode": "rrule",
+              "rrule": "FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=1",
+              "endDate": null
+            }
+          },
+          "tags": {
+            "owner": ["infra-eng"],
+            "urgency": "high",
+            "runType": "automated",
+            "reviewState": "confirmed",
+            "environmentScope": "production",
+            "maintenanceWindow": "monthly-first-day"
+          },
+          "operationalChecklist": { "isBlocking": false, "canRetry": true },
+          "needsReview": false
+        },
+        {
+          "id": "file-q3-compliance-audit",
+          "title": "Q3 Compliance Audit (One-time)",
+          "description": "One-time full archive audit for Q3 compliance review.",
+          "enabled": true,
+          "timezone": "Asia/Taipei",
+          "schedule": {
+            "type": "one_time",
+            "startDateTime": "2026-09-30T18:00:00+08:00",
+            "durationSeconds": 3600
+          },
+          "tags": {
+            "owner": ["infra-eng"],
+            "urgency": "high",
+            "runType": "manual",
+            "reviewState": "assumed",
+            "environmentScope": "production"
+          },
+          "needsReview": true,
+          "assumptions": ["Q3 ends September 30.", "Compliance team availability confirmed for Q3 audit window."]
+        }
+      ]
+    }
+  ]
+}
