@@ -1,66 +1,93 @@
 # Pipeline Schedule Visualizer
 
-A local-first, read-only calendar dashboard for data pipeline schedules.
+A local-first, read-only dashboard for visualizing pipeline schedule definitions across projects.
 
-Import a JSON file describing your projects, pipelines, and schedules — the app validates, expands recurrence, and renders everything on a FullCalendar view with filtering and detail inspection. No backend, no authentication, no data leaves your machine.
+> Screenshot: [add after deploy]
+
+---
 
 ## Quick Start
 
 ```bash
 npm install
-npm run dev        # starts dev server at http://localhost:5173
-npm run build      # production build
-npm run check      # TypeScript validation (tsc --noEmit)
-npm run test       # unit tests (vitest)
+npm run dev      # http://localhost:5173
 ```
 
-The app auto-loads `src/data/sample-schedules.json` on first open. Click **Import JSON** in the header to load your own data.
+Open the app, paste or load a JSON file that matches the schema below, and the schedules render immediately.
 
-## Features
+---
 
-| Feature | Status |
-|---|---|
-| Day / Week / Month calendar views | ✅ V1 |
-| Filter by project, pipeline, urgency, tags | ✅ V1 |
-| Click occurrence for detail panel (tags, IDs, breadcrumb) | ✅ V1 |
-| JSON import via file picker or paste | ✅ V1 |
-| Simple / RRULE / Cron / one-time recurrence | ✅ V1 |
-| Pipeline-shared across multiple projects | ✅ V1 |
-| Quarter / Half-Year / Year views | Milestone 2 |
-| Drag-and-drop editing | V1.5+ |
-| Execution monitoring / notifications | V1.5+ |
+## What It Does
 
-## JSON Format
+- **Imports JSON schedule definitions** — projects, pipelines, and schedules defined in a single structured document; no database required.
+- **Dual-tab visualization** — Timeline tab (continuous Gantt view with project → pipeline → schedule hierarchy) and Calendar tab (month/week/day grid); both tabs share the same data and filter state.
+- **Filter by project, pipeline, urgency, owner, domain, and custom tags** — filters are OR within a dimension and AND across dimensions.
+- **Click any occurrence to inspect detail** — schedule title, recurrence rule, timezone, duration, tags, operational checklist, output location, and dependency references.
+
+Read-only. Local-only. No backend, no auth, no database.
+
+---
+
+## Stack
+
+| Package | Version | Role |
+|---------|---------|------|
+| React | 19 | UI framework |
+| TypeScript | 6 | Type safety |
+| Vite | 8 | Dev server and build |
+| SVAR React Gantt | 2.7.0 (MIT) | Timeline tab |
+| FullCalendar Community | 6 | Calendar tab |
+| rrule | — | RRULE recurrence expansion |
+| cron-parser | — | Cron expression expansion |
+| Zod | 4 | Schema validation |
+
+---
+
+## Data Format
+
+The app loads a single JSON document. Full spec with all field definitions, validation rules, and annotated examples is in [`dev/Reference_JSON_Schedule_Schema.md`](dev/Reference_JSON_Schedule_Schema.md).
+
+### Minimal valid document
 
 ```json
 {
   "schemaVersion": "1.0",
-  "metadata": { "name": "My Schedules", "updatedAt": "2026-06-25T00:00:00+08:00" },
+  "metadata": {
+    "name": "Data Team Schedules",
+    "description": "...",
+    "updatedAt": "2026-06-25T00:00:00+08:00"
+  },
+  "tagCatalog": {},
   "projects": [
     {
-      "id": "ops-project",
-      "name": "Operations",
+      "id": "my-project",
+      "name": "My Project",
       "timezone": "Asia/Taipei",
-      "pipelineRefs": [{ "pipelineId": "my-pipeline" }]
+      "pipelineRefs": [{ "pipelineId": "pipe-1", "role": "primary" }]
     }
   ],
   "pipelines": [
     {
-      "id": "my-pipeline",
+      "id": "pipe-1",
       "name": "My Pipeline",
       "timezone": "Asia/Taipei",
       "schedules": [
         {
-          "id": "weekly-run",
-          "title": "Weekly Run",
-          "enabled": true,
+          "id": "sched-1",
+          "title": "Weekly Refresh",
           "timezone": "Asia/Taipei",
           "schedule": {
             "type": "recurring",
-            "startDate": "2026-01-01",
+            "startDate": "2026-07-07",
             "time": "09:00",
             "durationSeconds": 300,
-            "recurrence": { "mode": "simple", "frequency": "weekly", "interval": 1, "byWeekday": ["MO"] }
+            "recurrence": {
+              "mode": "simple",
+              "frequency": "weekly",
+              "interval": 1,
+              "byWeekday": ["MO"],
+              "endDate": null
+            }
           }
         }
       ]
@@ -69,123 +96,51 @@ The app auto-loads `src/data/sample-schedules.json` on first open. Click **Impor
 }
 ```
 
-See `dev/Reference_JSON_Schedule_Schema.md` for the full schema with all recurrence modes and tag fields.
+### Key rules
 
-## Timezone Behavior
+- Schedules must live inside pipelines; projects reference pipelines by id via `pipelineRefs` — never embed schedules in projects.
+- Default timezone is `Asia/Taipei` at the project level; pipelines and schedules inherit it. A project and its referenced pipelines may have different timezones — the display layer converts transparently.
+- Pipeline timezone and all child schedule timezones must match exactly — validation rejects mismatches.
+- Three mutually exclusive recurrence modes: `simple` (daily/weekly/monthly with human-readable fields), `rrule` (RFC 5545 RRULE string), or `cron` (standard five-field cron expression).
+- `durationSeconds` defaults to `300` if omitted. `endDate` is inclusive (last day an occurrence may start).
 
-- Default timezone: `Asia/Taipei`
-- Pipeline and all its child schedules must share the same timezone (validation error if mismatched)
-- Project ↔ pipeline timezone differences are allowed — display layer converts transparently
-- Display timezone depends on view context: single-project → project.timezone, single-pipeline → pipeline.timezone, global → browser timezone
+---
 
-## Schedule vs. Job
+## AI Authoring
 
-`schedule` is the official schema and code term. `job` is a UI/AI conversation alias only — never appears in JSON or TypeScript types.
+The JSON schema is designed so that an AI assistant can generate valid input from a natural-language description. Point the AI to [`dev/Reference_JSON_Schedule_Schema.md`](dev/Reference_JSON_Schedule_Schema.md), which contains the full AI output contract.
 
-## Recurrence Modes
+Key reminders for AI generation:
 
-Three modes per schedule (mutually exclusive):
+- Use `schedule` (not `job`) as the field name for schedule definitions.
+- Put project-to-pipeline membership in `project.pipelineRefs`. Do not include `pipeline.projectRefs` in the source JSON — it is derived by the app at normalization time and must not appear in input.
+- Default unspecified timezones to `Asia/Taipei`.
+- For simple recurring patterns, prefer `mode: "simple"`. For "first Monday of the month" or other complex patterns, use `mode: "rrule"`. If the user provides a cron expression, use `mode: "cron"` and preserve it verbatim.
+- Do not include `DTSTART` in an rrule string — the app injects it from `startDate` + `time` + `schedule.timezone`.
 
-| Mode | Field | Example |
-|---|---|---|
-| `simple` | `frequency`, `interval`, `byWeekday`/`byMonthDay` | weekly every Monday |
-| `rrule` | `rrule` string | `FREQ=WEEKLY;BYDAY=MO` |
-| `cron` | `cron` expression | `0 9 * * 1` (Mondays 09:00) |
+---
 
-Plus `type: "one_time"` for one-off schedules with `startDateTime` (ISO 8601 with offset).
-
-**Notes:**
-- `simple` monthly with `byMonthDay` 29–31 is rejected — use `rrule` instead
-- DTSTART is automatically injected by the normalization layer; do not include it in source JSON
-- Cron expressions are interpreted in `schedule.timezone`
-
-## Pipeline Sharing
-
-One pipeline can be referenced by multiple projects. The occurrence carries `projectContexts[]` with all referencing projects. Filtering by project returns all occurrences where that project is in `projectContexts`.
-
-```json
-"projects": [
-  { "id": "proj-a", "pipelineRefs": [{ "pipelineId": "shared-pipe" }] },
-  { "id": "proj-b", "pipelineRefs": [{ "pipelineId": "shared-pipe" }] }
-]
-```
-
-## Tag System
-
-Tags live at three levels:
-
-| Level | Tags | Example fields |
-|---|---|---|
-| Schedule | `directTags` | `urgency`, `owner`, `runType`, `sourceType` |
-| Pipeline | `inheritedTags` | `dataDomain`, `pipelineType`, `sourceSystem`, `targetSystem` |
-| Project | additive context | `purpose`, `stakeholder`, `lifecycle` |
-
-The filter panel queries the union of direct + inherited tags. Detail panel visually distinguishes direct tags (solid chips) from inherited tags (outlined chips).
-
-Urgency drives event chip color: `critical` = red, `high` = amber, `medium` = blue, `low` = gray.
-
-## Default Duration
-
-Missing `durationSeconds` defaults to `300` (5 minutes). Occurrences render with a minimum visual height of 30 minutes in time-grid views.
-
-## AI Prompt Example
-
-To generate importable JSON with an AI assistant, use a prompt like:
+## Development Commands
 
 ```
-Generate a pipeline schedule JSON for [your use case] following these rules:
-- schemaVersion: "1.0"
-- Top-level "projects" and "pipelines" arrays (not nested)
-- Put pipelineRefs on projects (ids only); schedules go inside pipelines
-- Never include pipeline.projectRefs — it is derived by the app
-- Pipeline and all its child schedules must share the same timezone
-- Default timezone: "Asia/Taipei" | Default duration: 300 seconds
-- Use "schedule" everywhere; "job" is a conversation alias only
-- One recurrence mode per schedule: simple / rrule / cron (or type: "one_time")
-- Do NOT add DTSTART to rrule strings — the app injects it automatically
-- Output raw JSON only — no markdown fences, no prose
+npm run dev      # local dev server (http://localhost:5173)
+npm run build    # production build
+npm run check    # TypeScript type check
+npm run test     # unit tests (29 tests)
 ```
 
-Full rules in `dev/Reference_AI_Output_Contract.md`.
+---
 
-## V1 Known Limitations
+## V1 Boundaries
 
-- Read-only — no editing, drag-and-drop, or execution monitoring
-- No database persistence — all data is in-memory per session
-- No authentication or access control
-- Quarter / Half-Year / Year views require custom implementation (Milestone 2)
-- Monthly simple recurrence with byMonthDay 29–31 must use `rrule` mode instead
+V1 is read-only. The following are explicitly out of scope:
 
-## Project Structure
+- Drag-and-drop schedule editing in the UI
+- Writing edits back to JSON from the UI
+- Execution monitoring (actual run success/failure)
+- Exception dates (skip a specific occurrence, reschedule one instance)
+- Notifications or alerting
+- Authentication or user accounts
+- Database persistence
 
-```
-src/
-  data/              sample JSON files
-  schema/
-    types.ts          TypeScript type definitions
-    validate.ts       Zod schema + parseScheduleDocument()
-    validateSample.ts smoke test script
-  lib/
-    normalize.ts      normalizeScheduleDocument()
-    expand.ts         expandRecurrence()
-    filters.ts        applyFilters(), FilterState
-    __tests__/        unit tests (vitest)
-  App.tsx             main app + calendar
-  FilterPanel.tsx     filter sidebar
-  DetailPanel.tsx     occurrence detail panel
-  ImportModal.tsx     JSON import UI
-documentation/
-  architecture.md     system design, data flow, trust boundaries
-  flows.md            user flow diagrams
-  permissions.md      auth/permissions stance
-  variables.md        secrets and environment variables
-  tests.md            test strategy and coverage map
-dev/
-  Pipeline_Schedule_Visualizer_PRD.md
-  Design_Data_Model_Architecture.md
-  Reference_JSON_Schedule_Schema.md
-  Reference_AI_Output_Contract.md
-  Tracker_V1_Checklist.md
-  Tracker_Sprint1_Plan.md
-  Audit_Assumption_Risk.md
-```
+See [`dev/Tracker_Roadmap_Milestones.md`](dev/Tracker_Roadmap_Milestones.md) for milestone definitions and the V1.5+ feature list.

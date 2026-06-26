@@ -1,7 +1,7 @@
 import { RRule } from 'rrule'
 import { CronExpressionParser } from 'cron-parser'
 import { DEFAULT_TIMEZONE } from '../schema/types'
-import type { CalendarOccurrence } from '../schema/types'
+import type { CalendarOccurrence, ScheduleFrequency } from '../schema/types'
 import type { NormalizedDocument, NormalizedSchedule, NormalizedPipeline } from './normalize'
 
 export interface DateRange {
@@ -73,6 +73,49 @@ function buildOccurrence(
     needsReview:     schedule.needsReview,
     assumptions:     schedule.assumptions,
   }
+}
+
+// ─── Frequency classification ─────────────────────────────────────────────────
+
+function classifyScheduleFrequency(schedule: NormalizedSchedule): ScheduleFrequency {
+  const def = schedule.schedule
+  if (def.type === 'one_time') return 'monthly-or-less'
+
+  const rec = def.recurrence
+
+  if (rec.mode === 'simple') {
+    if (rec.frequency === 'daily')   return 'daily'
+    if (rec.frequency === 'weekly')  return 'weekly'
+    return 'monthly-or-less'
+  }
+
+  if (rec.mode === 'rrule') {
+    const m = rec.rrule.match(/FREQ=(\w+)/i)
+    if (m) {
+      const f = m[1].toUpperCase()
+      if (f === 'SECONDLY' || f === 'MINUTELY' || f === 'HOURLY') return 'sub-daily'
+      if (f === 'DAILY')   return 'daily'
+      if (f === 'WEEKLY')  return 'weekly'
+    }
+    return 'monthly-or-less'
+  }
+
+  if (rec.mode === 'cron') {
+    try {
+      const iter = CronExpressionParser.parse(rec.cron, { currentDate: new Date() })
+      const t1 = iter.next().getTime()
+      const t2 = iter.next().getTime()
+      const gap = t2 - t1
+      if (gap < 86_400_000)          return 'sub-daily'       // < 24 h
+      if (gap < 7 * 86_400_000)      return 'daily'           // < 7 days
+      if (gap < 29 * 86_400_000)     return 'weekly'          // < 29 days
+      return 'monthly-or-less'
+    } catch {
+      return 'daily'
+    }
+  }
+
+  return 'daily'
 }
 
 // ─── Recurrence expanders ─────────────────────────────────────────────────────
@@ -302,6 +345,8 @@ export function expandRecurrence(doc: NormalizedDocument, range: DateRange): Cal
         occs = expandCron(pipeline, schedule, range, doc.displayTimezone)
       }
 
+      const freq = classifyScheduleFrequency(schedule)
+      for (const occ of occs) occ.scheduleFrequency = freq
       results.push(...occs)
     }
   }

@@ -224,6 +224,8 @@ export interface ProjectContext {
   pipelineRole?: string
 }
 
+export type ScheduleFrequency = 'sub-daily' | 'daily' | 'weekly' | 'monthly-or-less'
+
 export interface CalendarOccurrence {
   /** Format: pipelineId::scheduleId::scheduledStartUTC */
   id: string
@@ -248,4 +250,6 @@ export interface CalendarOccurrence {
   assumptions?: string[]
   /** Raw rule string: cron expression, rrule string, simple summary, or one-time ISO datetime */
   recurrenceSource?: string
+  /** Classified execution frequency — used for view-level auto-filtering */
+  scheduleFrequency?: ScheduleFrequency
 }

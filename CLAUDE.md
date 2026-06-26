@@ -4,11 +4,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Status
 
-**V1 Complete** — all 11 phases shipped. App runs locally with full sample data, filter panel, detail panel, responsive 200% zoom layout, emoji tag system, and 29 unit tests passing. See `dev/Tracker_V1_Checklist.md` for phase details.
+**V1 + Dual-Tab + UX Polish Complete (2026-06-26)** — all 11 phases shipped + SVAR Gantt migration (ADR-001) + dual-tab architecture (ADR-002) + post-V1 UX enhancements. App runs locally with full sample data, dual-tab UI (Timeline + Calendar), filter panel, detail panel, Mermaid diagram panel, JSON export, localStorage presets, frequency-based auto-filter, and 29 unit tests passing. See `dev/Tracker_V1_Checklist.md` for full phase + enhancement log; `dev/decisions/` for architecture decisions.
 
 ## Stack
 
-React 19 + TypeScript 6 + Vite 8 + FullCalendar Community 6 + rrule + cron-parser + Zod 4
+React 19 + TypeScript 6 + Vite 8 + SVAR React Gantt 2.7.0 (MIT) + FullCalendar Community 6 + rrule + cron-parser + Zod 4
+
+### UI Architecture: Dual-Tab
+
+Zone A (top, ≤33vh): filter panel, header controls, tab switcher.
+Zone B (fills remaining height): two tabs sharing the same data and filter state.
+
+| Tab | Library | Purpose |
+|-----|---------|---------|
+| Timeline | SVAR React Gantt 2.7.0 | Y = Project → Pipeline → Schedule hierarchy; X = time (continuous Gantt) |
+| Calendar | FullCalendar Community 6 | Month / Week / Day grid views |
+
+Shared state: `normalizedDoc`, `filterState`, `filteredOccs`, `selectedOcc`, `viewRange`.
+`viewRange` (today → +365 days) drives `expandRecurrence` once; FullCalendar does its own internal date windowing — never updates `viewRange` via `datesSet`.
 
 ## Commands
 
@@ -67,6 +80,19 @@ Plus `type: "one_time"` with `startDateTime`.
 
 Recurrence expansion happens **only within the visible view range** — never pre-generate infinite occurrences.
 
+### Schedule Frequency Classification
+
+`CalendarOccurrence.scheduleFrequency?: ScheduleFrequency` — computed in `expandRecurrence` per schedule:
+
+| Value | Meaning | Hidden in month-level FC views? |
+|---|---|---|
+| `sub-daily` | Hourly or more frequent | ✅ Yes |
+| `daily` | Once per day or several times per week | ✅ Yes |
+| `weekly` | Once per week | No |
+| `monthly-or-less` | Monthly, yearly, one-time | No |
+
+FullCalendar month / quarter / year views auto-filter to weekly+ by default. Week / Day views show all.
+
 ### Normalization Layer
 
 `normalizeScheduleDocument(doc, viewContext)` applies:
@@ -88,9 +114,9 @@ Source JSON is **never mutated** during normalization.
 |---|---|
 | Validation library | **Zod** (discriminatedUnion on recurrence.mode) |
 | State management | useState + useReducer (no external library) |
-| FullCalendar | Community edition; daygrid + timegrid + interaction plugins |
-| Time scales | Day / Week / Month / Quarter / Half-Year / Year (all V1) |
-| Calendar views | Quarter/Half/Year require custom implementation |
+| Calendar rendering | Dual-tab: Timeline (SVAR React Gantt) + Calendar (FullCalendar Community) |
+| Time scales — V1 | Day / Week / Month (Calendar tab); continuous Gantt timeline (Timeline tab) |
+| Time scales — M2 | Quarter / Year discrete views shipped; Half-Year removed (user decision) |
 | Primary color dimension | Urgency (critical=red, high=amber, medium=blue, low=gray) |
 | Pipeline/project visual | Left border stripe or background tint per pipeline |
 | Filter AND/OR | Within dimension = OR; across dimensions = AND |

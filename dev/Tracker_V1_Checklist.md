@@ -224,16 +224,22 @@ Acceptance criteria:
 ## Phase 6: Calendar UI
 
 > **Scope note (2026-06-25):** Quarter / Half-Year / Year views are deferred to Milestone 2.
-> V1 delivers Day / Week / Month only — all natively supported by FullCalendar Community.
+> V1 delivers Day / Week / Month only — all natively supported by FullCalendar Community (Calendar tab).
 > Rationale: custom multi-month grids would triple Phase 6 scope with unvalidated demand. See `Audit_Assumption_Risk.md` decision U3/F1.
 
+> **Architecture update (2026-06-26):** Dual-tab UI added (ADR-001 + ADR-002).
+> Zone A (top ≤33vh) = filters + header + tab switcher.
+> Zone B = **Timeline tab** (SVAR React Gantt — Y: Project→Pipeline→Schedule hierarchy, X: continuous time) OR **Calendar tab** (FullCalendar Community — Day/Week/Month).
+> Both tabs share the same `filteredOccs` from a single `expandRecurrence` call (365-day window).
+
 - Build the main app shell. Desktop-first (min 1024px). Below 768px: show "Please use a desktop browser" banner.
-- Add calendar views (V1 scope — Day / Week / Month only):
+- Add calendar views (V1 scope — Calendar tab: Day / Week / Month only):
   - Day (FullCalendar timeGridDay).
   - Week (FullCalendar timeGridWeek).
   - Month (FullCalendar dayGridMonth).
-- Add view switcher: segmented button group (not dropdown), preserves current date anchor across view changes.
-- Add navigation: previous, next, today, date picker.
+- Add Timeline tab (SVAR React Gantt): Y-axis hierarchy (Project → Pipeline → Schedule), X-axis = continuous time, horizontal scroll.
+- Add tab switcher in Zone A header: Timeline | Calendar.
+- Add navigation: previous, next, today, date picker (updates Gantt X-axis window).
 - Render occurrences with density overflow:
   - Month cells: max 3 visible event chips; overflow shows "+N more" expanding inline.
   - Minimum visual duration floor: 30 min (5-min schedules still render as 30-min block).
@@ -364,3 +370,57 @@ Acceptance criteria:
 - Filters work across project, pipeline, schedule, and inherited tags.
 - Detail panel explains each occurrence.
 - Documentation is current.
+
+---
+
+## Post-V1 UX Enhancements (2026-06-26)
+
+Shipped after V1 core was complete. All items: TypeScript 0 errors, 29/29 tests passing.
+
+### M2 Time Scales — ✅ Partial (Quarter + Year done; Half-Year removed)
+
+- ✅ Timeline tab: Week / Month / Quarter / Year presets (localStorage-persisted via `psv-preset`)
+- ✅ Calendar tab: multiMonthQuarter (3-month) + multiMonthYear (12-month) added via `@fullcalendar/multimonth`
+- ❌ Half-Year view: removed by user decision (too granular between Quarter and Year)
+- ⏳ Task grouping by owner / urgency: deferred
+
+### M2 Search & Saved Presets — ✅ Complete
+
+- ✅ Global text search (`filterState.searchText`) — matches schedule title, pipeline name, project name
+- ✅ Persistent filter state (localStorage `psv-filter`, Sets serialized as arrays)
+- ✅ Persistent active tab (`psv-tab`) and active preset (`psv-preset`)
+
+### M5.5 Mermaid Diagram Panel — ✅ Complete
+
+- ✅ `MermaidPanel.tsx`: Structure (flowchart LR, project subgraphs, classDef coloring) + Dependencies modes
+- ✅ Mermaid render fix: replaced `sanitize()` (quoted IDs) with `safeId()` (alphanumeric only) — Structure diagram now renders SVG correctly
+- ✅ Pan / zoom canvas: scroll wheel zooms (0.05×–10×), drag to pan, Reset button, zoom% display
+- ✅ Copy raw Mermaid syntax button
+
+### M3 JSON Export — ✅ Complete
+
+- ✅ Export JSON button downloads `schedules.json` (raw `ParsedScheduleDocument`, not normalized)
+
+### Schedule Frequency Auto-Filter — ✅ Complete
+
+- ✅ `ScheduleFrequency` type added to `CalendarOccurrence` (`sub-daily | daily | weekly | monthly-or-less`)
+- ✅ `classifyScheduleFrequency()` in `expand.ts`: simple→direct map, rrule→FREQ= parse, cron→gap heuristic
+- ✅ FullCalendar month / quarter / year views hide `sub-daily` and `daily` schedules by default (Week / Day show all)
+- ✅ `fcViewType` tracked from `datesSet` callback; filter applied in `fcEvents` useMemo
+
+### Calendar Event → Popup Modal — ✅ Complete
+
+- ✅ Calendar tab click now renders `OccurrencePopup` (centered modal, backdrop click closes)
+- ✅ Timeline tab keeps `DetailPanel` (right-side fixed overlay)
+- ✅ `DetailPanel` positioning bug fixed: was off-screen at desktop (flex child rendered below zone-b). Now always `position: fixed; right: 0; top: 52px; bottom: 0`
+- ✅ CSS override inside `.occ-popup-card`: resets fixed positioning to static so panel flows in card
+
+### SVAR Gantt Grid Visibility Fix — ✅ Complete
+
+- ✅ Root cause: SVAR requires concrete pixel height — `flex: 1; min-height: 0` on the wrapper was insufficient
+- ✅ Fix: `zone-b` changed to `position: relative`; `gantt-wrapper` and `fc-wrapper` changed to `position: absolute; inset: 0`
+
+### Other UX Polish
+
+- ✅ Header meta text shortened from `{proj}p · {pipe}pl · {sched}s · showing X / Y occ · TZ: Asia/Taipei` → `X / Y occ`
+- ✅ `datesSet` callback: now captures `arg.view.type` into `fcViewType` state (was no-op before)

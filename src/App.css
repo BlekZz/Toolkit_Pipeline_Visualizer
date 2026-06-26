@@ -87,6 +87,19 @@
   display: none;
 }
 
+.search-input {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  background: #1e293b;
+  color: #f1f5f9;
+  font-size: 12px;
+  width: 160px;
+}
+.search-input::placeholder { color: #94a3b8; }
+.search-input:focus { outline: none; border-color: #60a5fa; }
+
 .date-picker {
   padding: 4px 8px;
   border: 1px solid #334155;
@@ -103,18 +116,8 @@
   border-color: #2563eb;
 }
 
-.app-body {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-.app-main {
-  flex: 1;
-  overflow: hidden;
-  padding: 16px 20px 16px 0;
-  min-width: 0;
-}
+/* app-body no longer used; kept for reference only */
+/* .app-body / .app-main replaced by zone-a / zone-b layout */
 
 /* ─── Legend sidebar ──────────────────────────────────────────────────────── */
 
@@ -177,6 +180,8 @@
 /* ─── Filter panel ────────────────────────────────────────────────────────── */
 
 .filter-panel {
+  /* In Zone A: renders as a collapsed/slide-in drawer that overlaps Zone B when open */
+  /* Default state: hidden, shown via the toggle button or always-visible at ≥ 900px */
   width: 236px;
   flex-shrink: 0;
   display: flex;
@@ -184,6 +189,19 @@
   background: #fff;
   border-right: 1px solid #e2e8f0;
   overflow: hidden;
+  /* In zone-a context, filter panel is a fixed drawer overlay */
+  position: fixed;
+  left: 0;
+  top: 52px;
+  bottom: 0;
+  z-index: 60;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
+  transform: translateX(-100%);
+  transition: transform 0.22s ease;
+}
+
+.filter-panel--open {
+  transform: translateX(0);
 }
 
 .fp-search-row {
@@ -395,42 +413,116 @@
   font-weight: 500;
 }
 
-/* ─── FullCalendar overrides ──────────────────────────────────────────────── */
+/* ─── Zone A / Zone B layout ──────────────────────────────────────────────── */
 
-/* Remove FullCalendar's own event background/border since ev-chip owns it */
+/* Zone A: header + filter bar — shrinks to content, max 33vh */
+.zone-a {
+  flex-shrink: 0;
+  max-height: 33vh;
+  overflow-y: auto;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+/* Filters rendered inline in Zone A (horizontal scroll on narrow screens) */
+.zone-a-filters {
+  position: relative;
+  overflow-x: auto;
+}
+
+/* Zone B: canvas host — position:relative so children can fill it absolutely */
+.zone-b {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Both tabs fill zone-b absolutely — gives SVAR concrete pixel dimensions */
+.gantt-wrapper,
+.fc-wrapper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* Force SVAR root element to fill 100% */
+.gantt-wrapper > div,
+.gantt-wrapper .wx-gantt {
+  width: 100%;
+  height: 100%;
+}
+
+/* ─── Tab switcher ────────────────────────────────────────────────────────── */
+
+.tab-switcher {
+  display: flex;
+  gap: 4px;
+}
+
+.tab-btn {
+  padding: 4px 14px;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background: #1e293b;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+}
+
+.tab-btn:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.tab-btn--active {
+  background: #1d4ed8;
+  color: #fff;
+  border-color: #1d4ed8;
+}
+
+/* ─── FullCalendar wrapper ────────────────────────────────────────────────── */
+
+/* .fc-wrapper position/size set in zone-b block above; only visual styles here */
+.fc-wrapper {
+  padding: 8px;
+  background: #fff;
+}
+
+/* Transparent event background so EventChip controls the look */
 .fc-event {
   background: transparent !important;
   border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
 }
 
 .fc-event-main {
   padding: 0 !important;
-  height: 100%;
 }
 
-/* Header toolbar */
+/* Tighten FullCalendar toolbar to match app chrome */
 .fc .fc-toolbar {
-  padding: 10px 14px 8px;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 6px 8px;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .fc .fc-toolbar-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: #0f172a;
 }
 
 .fc .fc-button {
+  font-size: 12px;
+  padding: 3px 10px;
   background: #f1f5f9;
   border: 1px solid #cbd5e1;
   color: #334155;
-  font-size: 12px;
-  padding: 4px 10px;
   border-radius: 5px;
-  font-weight: 500;
+  box-shadow: none;
 }
 
 .fc .fc-button:hover {
@@ -438,58 +530,26 @@
   border-color: #94a3b8;
 }
 
-.fc .fc-button-active,
-.fc .fc-button-primary:not(:disabled).fc-button-active {
-  background: #0f172a !important;
-  border-color: #0f172a !important;
-  color: #f8fafc !important;
-}
-
-.fc .fc-button-group .fc-button {
-  border-radius: 0;
-}
-.fc .fc-button-group .fc-button:first-child {
-  border-radius: 5px 0 0 5px;
-}
-.fc .fc-button-group .fc-button:last-child {
-  border-radius: 0 5px 5px 0;
-}
-
-/* Today highlight */
-.fc .fc-day-today {
-  background: #eff6ff !important;
-}
-
-.fc .fc-day-today .fc-daygrid-day-number {
-  background: #2563eb;
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
   color: #fff;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
 }
 
-/* Day/time label */
-.fc .fc-col-header-cell-cushion,
-.fc .fc-daygrid-day-number,
-.fc .fc-timegrid-slot-label-cushion {
-  font-size: 11px;
-  color: #475569;
-}
-
-/* More link */
-.fc .fc-daygrid-more-link {
-  font-size: 10px;
-  color: #2563eb;
-  font-weight: 600;
+.fc .fc-button-primary:focus {
+  box-shadow: none;
 }
 
 /* ─── Detail panel ────────────────────────────────────────────────────────── */
 
+/* Always a fixed right-side overlay in Timeline tab */
 .detail-panel {
+  position: fixed;
+  right: 0;
+  top: 52px;
+  bottom: 0;
+  z-index: 55;
   width: 320px;
   flex-shrink: 0;
   display: flex;
@@ -498,6 +558,42 @@
   border-left: 1px solid #e2e8f0;
   overflow-y: auto;
   font-size: 12px;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+}
+
+/* ─── Calendar occurrence popup ───────────────────────────────────────────── */
+
+.occ-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.occ-popup-card {
+  width: 360px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+}
+
+/* Inside popup: reset fixed positioning so DetailPanel flows in the card */
+.occ-popup-card .detail-panel {
+  position: static;
+  right: auto;
+  top: auto;
+  bottom: auto;
+  width: 100%;
+  box-shadow: none;
+  border-radius: 0;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .dp-header {
@@ -998,64 +1094,76 @@ details[open] .dp-advanced-toggle::before {
 
 /* ─── Responsive — 200% zoom support (≤ 899px CSS pixels) ────────────────── */
 
-@media (max-width: 899px) {
-  /* Filter panel becomes a fixed slide-in drawer */
-  .filter-panel {
-    position: fixed;
-    left: 0;
-    top: 52px;
-    bottom: 0;
-    z-index: 60;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
-    transform: translateX(-100%);
-    transition: transform 0.22s ease;
-  }
+/* Backdrop dims content when filter drawer is open */
+.filter-backdrop--visible {
+  display: block;
+  position: fixed;
+  inset: 52px 0 0 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 59;
+}
 
-  .filter-panel--open {
-    transform: translateX(0);
-  }
-
-  /* Backdrop dims the calendar when drawer is open */
-  .filter-backdrop--visible {
-    display: block;
-    position: fixed;
-    inset: 52px 0 0 0;
-    background: rgba(0, 0, 0, 0.35);
-    z-index: 59;
-  }
-
-  /* Show the toggle button */
-  .filter-toggle {
-    display: flex;
-  }
-
-  .app-main {
-    padding: 8px;
-  }
+/* Show the filter toggle at all widths (Gantt layout is always compact) */
+.filter-toggle {
+  display: flex;
 }
 
 @media (max-width: 699px) {
-  /* Detail panel becomes a fixed right-side overlay */
   .detail-panel {
-    position: fixed;
-    right: 0;
-    top: 52px;
-    bottom: 0;
-    z-index: 55;
     width: min(320px, 100vw);
-    border-left: 1px solid #e2e8f0;
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
   }
 
-  /* Hide the date picker to save header space */
   .date-picker {
     display: none;
   }
 
-  /* Condense meta in header */
   .app-meta {
     font-size: 11px;
   }
+}
+
+/* ─── View preset bar ─────────────────────────────────────────────────────── */
+
+.view-presets {
+  display: flex;
+  gap: 4px;
+  padding: 6px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.preset-btn {
+  padding: 3px 12px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  color: #475569;
+  transition: all 0.15s;
+}
+
+.preset-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.preset-btn--active {
+  background: #1e40af;
+  color: #fff;
+  border-color: #1e40af;
+}
+
+.preset-spacer { flex: 1; }
+
+/* ─── Multimonth calendar overrides ──────────────────────────────────────── */
+
+.fc-multimonth-daygrid .fc-event {
+  font-size: 10px;
+}
+
+.fc-multimonth-header-table {
+  background: #f8fafc;
 }
 
 /* ─── Mobile fallback ─────────────────────────────────────────────────────── */

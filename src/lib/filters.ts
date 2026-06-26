@@ -4,6 +4,7 @@ import type { NormalizedDocument } from './normalize'
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface FilterState {
+  searchText: string
   // Entity
   projects:    Set<string>
   pipelines:   Set<string>
@@ -46,6 +47,7 @@ export interface FilterOptions {
 
 export function emptyFilter(): FilterState {
   return {
+    searchText: '',
     projects:    new Set(),
     pipelines:   new Set(),
     dataDomains:   new Set(),
@@ -64,11 +66,15 @@ export function emptyFilter(): FilterState {
 }
 
 export function isFilterEmpty(f: FilterState): boolean {
-  return Object.values(f).every((s) => s.size === 0)
+  if (f.searchText !== '') return false
+  const { searchText: _, ...sets } = f
+  return Object.values(sets).every((s) => (s as Set<string>).size === 0)
 }
 
 export function countActiveFilters(f: FilterState): number {
-  return Object.values(f).reduce((n, s) => n + s.size, 0)
+  const { searchText, ...sets } = f
+  const setCount = Object.values(sets).reduce((n, s) => n + (s as Set<string>).size, 0)
+  return setCount + (searchText ? 1 : 0)
 }
 
 export function toggleValue(set: Set<string>, value: string): Set<string> {
@@ -81,9 +87,23 @@ export function toggleValue(set: Set<string>, value: string): Set<string> {
 // ─── Filter application ───────────────────────────────────────────────────────
 
 export function applyFilters(occs: CalendarOccurrence[], f: FilterState): CalendarOccurrence[] {
-  if (isFilterEmpty(f)) return occs
+  let result = occs
 
-  return occs.filter((occ) => {
+  // Full-text search across schedule title, pipeline name, and project names
+  if (f.searchText) {
+    const q = f.searchText.toLowerCase()
+    result = result.filter((occ) =>
+      occ.scheduleTitle.toLowerCase().includes(q) ||
+      occ.pipelineName.toLowerCase().includes(q) ||
+      occ.projectContexts.some((ctx) => ctx.projectName.toLowerCase().includes(q))
+    )
+  }
+
+  // Short-circuit if no dimension filters are active
+  const { searchText: _, ...sets } = f
+  if (Object.values(sets).every((s) => (s as Set<string>).size === 0)) return result
+
+  return result.filter((occ) => {
     const dt = occ.directTags
     const it = occ.inheritedTags
 

@@ -28,8 +28,47 @@ Exit criteria：
 - 已確認 V1 不包含 drag-and-drop；drag-and-drop 固定放入 V1.5。
 - 能決定第一版使用 JSON-only 或 local storage。
 - 能決定 calendar library。
+- Calendar library 架構決策已定案（見 ADR-001）。
+- Dual-tab UI architecture decided (ADR-002).
 
-## Milestone 1: Read-only Static Calendar MVP
+## Milestone 0.5: Calendar Architecture Pivot — SVAR React Gantt Migration
+
+目的：以 SVAR React Gantt 取代 FullCalendar Community，實現 Resource Timeline 佈局（Y 軸階層式 drilldown：Project → Pipeline → Schedule；X 軸為時間軸，支援橫向捲動）。
+
+Trigger：FullCalendar Community 不支援 Resource Timeline（該功能屬 Premium 版）；本專案要求完全 open-source 方案。
+
+ADR：ADR-001（見 `dev/decisions/ADR-001-timeline-library-migration.md`）。
+
+Scope：
+
+- **Phase A — Spike Validation** ✅ COMPLETE (2026-06-26)：
+  - 安裝 SVAR React Gantt。
+  - 建立最小可行 spike，實作 3 層階層結構（Project → Pipeline → Schedule）。
+  - 驗證下列 5 項準則，全數通過方可進入 Phase B。
+
+- **Phase B — Full dual-tab implementation** ✅ COMPLETE (2026-06-26)：
+  - Timeline tab (SVAR React Gantt) + Calendar tab (FullCalendar Community)。
+  - 共用 `filteredOccs`（single `expandRecurrence` call，365-day window）。
+  - `viewRange` 只供 Gantt X 軸使用；FullCalendar 自行做內部日期 windowing（不覆寫 viewRange）。
+  - Tab 切換後 occurrence count 穩定不掉（QA 驗證：11330/11330 consistent）。
+  - TypeScript: 0 errors；Tests: 29/29 pass。
+
+Spike validation criteria（全部通過才能推進 Phase B）：
+
+1. 3-level collapsible hierarchy 正確渲染：Project → Pipeline → Schedule。
+2. 橫向捲動（time axis）正常運作。
+3. 24h 時間格式正確顯示。
+4. Event bars（schedule occurrences）在 timeline 上正確渲染。
+5. 與 React 19 + TypeScript 相容。
+
+Fallback：若 SVAR spike 失敗，改採 dnd-timeline（MIT, headless）。
+
+Exit criteria：
+
+- 全部 5 項 spike 準則通過。
+- 現有 sample data 可在 SVAR 中正確渲染。
+
+## Milestone 1: Read-only Static Calendar MVP ✅ COMPLETE (2026-06-25)
 
 目的：完成可讀、可匯入、可篩選的靜態排程儀表板。
 
@@ -88,33 +127,26 @@ Exit criteria：
 - 點擊任務可看到完整 metadata。
 - 未填 duration 的 schedule 會用 300 秒預設值。
 
-## Milestone 2: Expanded Time Scales And Roadmap Views
+## Milestone 2: Expanded Time Scales And Roadmap Views — 🔄 PARTIAL (2026-06-26)
 
 目的：把 calendar 從日常課表延伸到 pipeline roadmap。
 
-Scope：
+Scope 與進度：
 
-- Quarter view。
-- Half-year view。
-- Year / roadmap density view。
-- Task grouping：
-  - by project
-  - by pipeline
-  - by owner
-  - by urgency
-- Search。
-- Saved view presets。
-- Project derived dimensions：
-  - derived data domains
-  - derived source systems
-  - derived target systems
-  - derived pipeline owners
+- ✅ Quarter view (Timeline preset + Calendar multiMonthQuarter)
+- ✅ Year / roadmap density view (Timeline preset + Calendar multiMonthYear)
+- ❌ Half-year view — 移除（user decision：Quarter 與 Year 之間不需要中間層）
+- ✅ Search — global text search (schedule title / pipeline name / project name)
+- ✅ Saved view presets — localStorage 持久化 (psv-preset / psv-tab / psv-filter)
+- ✅ Frequency auto-filter — month/quarter/year 視圖自動隱藏 sub-daily / daily schedules
+- ⏳ Task grouping (by owner / urgency) — 尚未實作
+- ⏳ Project derived dimensions — 尚未實作
 
 Exit criteria：
 
-- 使用者可以回答「這一季有哪些 project / pipeline schedule」。
-- 使用者可以看出某週或某月任務密度是否過高。
-- 使用者可以用 tags 建立常用視圖。
+- ✅ 使用者可以回答「這一季有哪些 project / pipeline schedule」。
+- ✅ 使用者可以看出某週或某月任務密度是否過高（month view 自動過濾高頻 schedule）。
+- ⏳ 使用者可以用 tags 建立常用視圖（grouping 尚未完成）。
 
 ## Milestone 3: JSON Authoring And Editing
 
