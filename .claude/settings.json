@@ -3,5 +3,29 @@
     "pm-execution@github-phuryn": true,
     "pm-ai-shipping@github-phuryn": true,
     "pm-product-discovery@github-phuryn": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{let f='';try{f=(JSON.parse(d).tool_input||{}).file_path||''}catch(e){};if(f.endsWith('.md')){console.log('SYNC_HOOK [CREATE]: New .md created at '+f+'\\n→ (1) add YAML frontmatter (sync_group / sync_with) (2) register in dev/Reference_doc_sync.md (3) add to CLAUDE.md Document Ownership if project-level');}})\"",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{let f='';try{f=(JSON.parse(d).tool_input||{}).file_path||''}catch(e){};const g=f.split(String.fromCharCode(92)).join('/');const triggers=['src/','documentation/','dev/Reference_JSON_Schedule_Schema'];if(triggers.some(t=>g.includes(t))){console.log('SYNC_HOOK [MODIFY]: '+f+'\\n→ check dev/Reference_doc_sync.md Part B Quick Lookup for must-update targets');}})\"",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
   }
 }
