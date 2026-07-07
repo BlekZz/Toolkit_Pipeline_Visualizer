@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Status
 
-**V1 + Dual-Tab + UX Polish Complete (2026-06-26)** — all 11 phases shipped + SVAR Gantt migration (ADR-001) + dual-tab architecture (ADR-002) + post-V1 UX enhancements. App runs locally with full sample data, dual-tab UI (Timeline + Calendar), filter panel, detail panel, Mermaid diagram panel, JSON export, localStorage presets, frequency-based auto-filter, and 29 unit tests passing. See `dev/Tracker_V1_Checklist.md` for full phase + enhancement log; `dev/decisions/` for architecture decisions.
+**V1 + Dual-Tab + UX Polish Complete (2026-06-26)** — all 11 phases shipped + SVAR Gantt migration (ADR-001) + dual-tab architecture (ADR-002) + post-V1 UX enhancements. App runs locally with full sample data, dual-tab UI (Timeline + Calendar), filter panel, detail panel, Mermaid diagram panel, JSON export, localStorage presets, frequency-based auto-filter, and 46 unit tests passing. See `dev/Tracker_V1_Checklist.md` for full phase + enhancement log; `dev/decisions/` for architecture decisions; `dev/Tracker_Tech_Debt_And_Optimization.md` for the standing tech-debt/optimization backlog (check before starting new work — several items are quick wins).
 
 ## Stack
 
@@ -138,6 +138,7 @@ Source JSON is **never mutated** during normalization.
 | `dev/Reference_JSON_Schedule_Schema.md` | Canonical JSON shape with examples for all recurrence modes |
 | `dev/Tracker_V1_Checklist.md` | Phase-by-phase implementation checklist with acceptance criteria |
 | `dev/Tracker_Roadmap_Milestones.md` | Milestone definitions and exit criteria |
+| `dev/Tracker_Tech_Debt_And_Optimization.md` | Standing backlog of tech debt, deferred cleanups, and optimization opportunities — check before new work |
 
 ## V1 Boundaries
 

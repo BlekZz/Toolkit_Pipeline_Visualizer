@@ -424,3 +424,14 @@ Shipped after V1 core was complete. All items: TypeScript 0 errors, 29/29 tests 
 
 - ✅ Header meta text shortened from `{proj}p · {pipe}pl · {sched}s · showing X / Y occ · TZ: Asia/Taipei` → `X / Y occ`
 - ✅ `datesSet` callback: now captures `arg.view.type` into `fcViewType` state (was no-op before)
+
+---
+
+## Post-V1: Tech Debt & Optimization Audit (2026-07-08)
+
+A multi-agent codebase scan found the build was broken (missing dependency,
+dead spike-mode import) and several correctness/coverage gaps. All were
+fixed same-session — see `[[Tracker_Tech_Debt_And_Optimization]]` for the
+full resolved list, the still-open backlog (Escape-key UX bug, `App.tsx`
+size, test coverage gaps, performance watch-items), and guidance for
+whichever agent picks up the next task.
