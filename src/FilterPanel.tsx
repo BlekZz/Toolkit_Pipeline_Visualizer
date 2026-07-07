@@ -87,12 +87,13 @@ export function FilterPanel({ options, filter, onChange, visibleCount, totalCoun
   const toggleSection = useCallback((id: string) => {
     setOpen((prev) => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
   }, [])
 
-  const toggle = useCallback((key: keyof FilterState, value: string) => {
+  const toggle = useCallback((key: Exclude<keyof FilterState, 'searchText'>, value: string) => {
     onChange({ ...filter, [key]: toggleValue(filter[key], value) })
   }, [filter, onChange])
 

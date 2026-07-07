@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef, lazy, Suspense } from 'react'
 
 import { Gantt } from '@svar-ui/react-gantt'
 import '@svar-ui/react-gantt/all.css'
@@ -22,9 +22,13 @@ import type { CalendarOccurrence } from './schema/types'
 import { FilterPanel } from './FilterPanel'
 import { DetailPanel } from './DetailPanel'
 import { ImportModal } from './ImportModal'
-import { MermaidPanel } from './MermaidPanel'
 import sampleData from './data/sample-schedules.json'
 import './App.css'
+
+// Lazy-loaded: mermaid is ~2 MB and only needed when the diagram panel opens
+const MermaidPanel = lazy(() =>
+  import('./MermaidPanel').then((m) => ({ default: m.MermaidPanel })),
+)
 
 // ─── Urgency color palette ────────────────────────────────────────────────────
 
@@ -453,7 +457,6 @@ function App() {
     setSelectedOcc(occ)
   }, [])
 
-  const scheduleCount     = normalizedDoc?.pipelines.reduce((n, p) => n + p.schedules.length, 0) ?? 0
   const activeFilterCount = useMemo(() => countActiveFilters(filterState), [filterState])
 
   // Wire select-task via the IApi ref once the Gantt mounts
@@ -681,7 +684,9 @@ function App() {
 
       {/* Mermaid diagram panel */}
       {showMermaid && normalizedDoc && (
-        <MermaidPanel doc={normalizedDoc} onClose={() => setShowMermaid(false)} />
+        <Suspense fallback={null}>
+          <MermaidPanel doc={normalizedDoc} onClose={() => setShowMermaid(false)} />
+        </Suspense>
       )}
 
       {/* Import modal */}

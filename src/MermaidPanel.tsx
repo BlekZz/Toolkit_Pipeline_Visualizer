@@ -23,7 +23,7 @@ function safeId(raw: string): string {
 }
 
 function labelText(text: string): string {
-  return text.replace(/["\[\]{}|]/g, ' ').trim()
+  return text.replace(/["[\]{}|]/g, ' ').trim()
 }
 
 function buildStructureDiagram(doc: NormalizedDocument): string {

@@ -233,14 +233,16 @@ function expandRrule(
   if (def.type !== 'recurring') return []
   if (def.recurrence.mode !== 'rrule') return []
 
+  // Hoist past the mode guard — narrowing on def.recurrence doesn't survive into the .map closure
+  const rec = def.recurrence
   const duration = def.durationSeconds
 
   try {
-    const rule = RRule.fromString(def.recurrence.rrule)
+    const rule = RRule.fromString(rec.rrule)
     const occurrences = rule.between(range.start, range.end, true)
 
     // Apply endDate constraint if present
-    const hardEnd = def.recurrence.endDate ? new Date(def.recurrence.endDate + 'T23:59:59Z') : null
+    const hardEnd = rec.endDate ? new Date(rec.endDate + 'T23:59:59Z') : null
 
     return occurrences
       .filter((d) => !hardEnd || d <= hardEnd)
@@ -253,7 +255,7 @@ function expandRrule(
 
         const occ = buildOccurrence(pipeline, schedule, realUtc, duration)
         occ.recurrenceMode = 'rrule'
-        occ.recurrenceSource = def.recurrence.rrule
+        occ.recurrenceSource = rec.rrule
         occ.displayTimezone = displayTimezone
         return occ
       })
