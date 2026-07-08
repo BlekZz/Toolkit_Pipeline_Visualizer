@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef, lazy, Suspense } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef, useDeferredValue, useTransition, lazy, Suspense } from 'react'
 
 import type { IScaleConfig } from '@svar-ui/react-gantt'
 import type { EventClickArg, DatesSetArg } from '@fullcalendar/core'
@@ -7,7 +7,7 @@ import { parseScheduleDocument } from './schema/validate'
 import type { ParsedScheduleDocument } from './schema/validate'
 import { normalizeScheduleDocument } from './lib/normalize'
 import type { NormalizedDocument } from './lib/normalize'
-import { expandRecurrence } from './lib/expand'
+import { getOccurrencesCached, createExpandCacheState } from './lib/expand-cache'
 import { applyFilters, extractFilterOptions, emptyFilter, countActiveFilters } from './lib/filters'
 import type { FilterState } from './lib/filters'
 import type { CalendarOccurrence } from './schema/types'
@@ -120,14 +120,29 @@ function App() {
   // Occurrences map for click lookup
   const occsById = useRef<Map<string, CalendarOccurrence>>(new Map())
 
+  // Cache for expandRecurrence results, keyed by (doc identity, range) — see
+  // lib/expand-cache.ts. Shrinking the view range (e.g. Year -> Month) reuses
+  // the cached expansion instead of re-running expandRecurrence.
+  const expandCacheState = useRef(createExpandCacheState())
+
+  const [isPending, startTransition] = useTransition()
+
   const filterOptions = useMemo(
     () => (normalizedDoc ? extractFilterOptions(normalizedDoc) : null),
     [normalizedDoc],
   )
 
+  // Defer the search text so keystrokes don't block re-filtering the full
+  // occurrence list on every character typed.
+  const deferredSearchText = useDeferredValue(filterState.searchText)
+  const effectiveFilterState = useMemo(
+    () => ({ ...filterState, searchText: deferredSearchText }),
+    [filterState, deferredSearchText],
+  )
+
   const filteredOccs = useMemo(
-    () => applyFilters(allOccs, filterState),
-    [allOccs, filterState],
+    () => applyFilters(allOccs, effectiveFilterState),
+    [allOccs, effectiveFilterState],
   )
 
   // Keep occsById in sync with filteredOccs
@@ -137,16 +152,21 @@ function App() {
     occsById.current = map
   }, [filteredOccs])
 
-  // Expand occurrences when the normalized doc or view range changes
+  // Expand occurrences when the normalized doc or view range changes — served
+  // from the range-aware cache whenever possible (see expand-cache.ts).
   useEffect(() => {
     if (!normalizedDoc) return
-    const occs = expandRecurrence(normalizedDoc, { start: viewRange.start, end: viewRange.end })
+    const occs = getOccurrencesCached(
+      expandCacheState.current,
+      normalizedDoc,
+      { start: viewRange.start, end: viewRange.end },
+    )
     setAllOccs(occs)
   }, [normalizedDoc, viewRange])
 
   const ganttTasks = useMemo(
-    () => toGanttData(filteredOccs, collapseSchedules),
-    [filteredOccs, collapseSchedules]
+    () => toGanttData(filteredOccs, collapseSchedules, activePreset),
+    [filteredOccs, collapseSchedules, activePreset]
   )
 
   // Dynamic Gantt scales and cell width based on active view preset
@@ -213,13 +233,17 @@ function App() {
     setFcViewType(arg.view.type)
   }, [])
 
-  // View preset click — sets Gantt X-axis window from today-3 to today+N days
+  // View preset click — sets Gantt X-axis window from today-3 to today+N days.
+  // Wrapped in a transition so the button click itself stays responsive while
+  // the (potentially large) downstream re-expansion/re-render happens.
   const handlePresetClick = useCallback((preset: typeof VIEW_PRESETS[number]) => {
     const start = new Date(); start.setDate(start.getDate() - 3); start.setHours(0, 0, 0, 0)
     const end = new Date(); end.setDate(end.getDate() + preset.days); end.setHours(23, 59, 59, 999)
-    setViewRange({ start, end })
-    setActivePreset(preset.key)
-  }, [])
+    startTransition(() => {
+      setViewRange({ start, end })
+      setActivePreset(preset.key)
+    })
+  }, [startTransition])
 
   // FullCalendar eventClick handler
   const handleFCEventClick = useCallback((arg: EventClickArg) => {
@@ -257,14 +281,14 @@ function App() {
               <div className="tab-switcher">
                 <button
                   className={`tab-btn${activeTab === 'timeline' ? ' tab-btn--active' : ''}`}
-                  onClick={() => { setActiveTab('timeline'); setFilterOpen(false) }}
+                  onClick={() => startTransition(() => { setActiveTab('timeline'); setFilterOpen(false) })}
                   type="button"
                 >
                   Timeline
                 </button>
                 <button
                   className={`tab-btn${activeTab === 'calendar' ? ' tab-btn--active' : ''}`}
-                  onClick={() => { setActiveTab('calendar'); setFilterOpen(false) }}
+                  onClick={() => startTransition(() => { setActiveTab('calendar'); setFilterOpen(false) })}
                   type="button"
                 >
                   Calendar
@@ -360,7 +384,7 @@ function App() {
         </div>
 
         {/* ── Zone B: canvas (timeline or calendar) ── */}
-        <div className="zone-b">
+        <div className="zone-b" aria-busy={isPending}>
           {normalizedDoc && filterOptions ? (
             activeTab === 'timeline' ? (
               <TimelineTab
