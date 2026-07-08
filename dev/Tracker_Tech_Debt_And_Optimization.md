@@ -129,6 +129,11 @@ is now consistent with all doc sources.
 
 ## ⏳ Open — Structural / Refactor
 
+> **2026-07-08 note**: the `App.tsx` split below and both Performance items are
+> now claimed by [[Sprint_Perf_And_Visual_Overhaul]] (M0 / M1) — execute them
+> through that sprint's milestones, not ad hoc; move them to ✅ when the sprint
+> lands.
+
 - **`App.tsx` is 621 lines** hosting the entire app shell: state
   orchestration, `toGanttData()`/`toEvent()` transforms, the
   `OccurrencePopup` sub-component, and the FullCalendar/SVAR Gantt wiring
