@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toGanttData } from '../gantt-transform'
+import { toGanttData, computeMinBarMs, computeGanttCellWidth, MIN_BAR_PX } from '../gantt-transform'
 import type { CalendarOccurrence } from '../../schema/types'
 import type { ProjectContext } from '../../schema/types'
 
@@ -95,5 +95,41 @@ describe('toGanttData — month/quarter/year preset (aggregated)', () => {
     const tasks = toGanttData(occs, true, 'month')
     const agg = tasks.find((t) => String(t.id).startsWith('agg-'))!
     expect(agg.end!.getTime() - agg.start!.getTime()).toBeGreaterThanOrEqual(30 * 60 * 1000)
+  })
+})
+
+describe('computeMinBarMs — pixel-based minimum bar width', () => {
+  it('renders to at least MIN_BAR_PX for every preset given its own cellWidth', () => {
+    for (const preset of ['week', 'month', 'quarter', 'year'] as const) {
+      const ms = computeMinBarMs(preset)
+      const cellWidth = computeGanttCellWidth(preset)
+      // Reconstruct rendered px width from ms using the same base-unit
+      // assumption as the implementation (day/day/week/month respectively)
+      // via the ratio: renderedPx = (ms / unitMs) * cellWidth === MIN_BAR_PX
+      const unitMs = preset === 'quarter'
+        ? 7 * 24 * 60 * 60 * 1000
+        : preset === 'year'
+          ? 30.44 * 24 * 60 * 60 * 1000
+          : 24 * 60 * 60 * 1000
+      const renderedPx = (ms / unitMs) * cellWidth
+      expect(renderedPx).toBeCloseTo(MIN_BAR_PX, 5)
+    }
+  })
+
+  it('month preset minimum is ~3.6 hours at 40px/day (matches spec example)', () => {
+    const ms = computeMinBarMs('month')
+    const hours = ms / (60 * 60 * 1000)
+    expect(hours).toBeCloseTo(3.6, 1)
+  })
+
+  it('single occurrence bar meets the pixel-based minimum at every preset', () => {
+    for (const preset of ['week', 'month', 'quarter', 'year'] as const) {
+      const occs = [makeOcc({ id: 'a' })]
+      const tasks = toGanttData(occs, true, preset)
+      const bar = tasks.find((t) => String(t.id).startsWith('occ-') || String(t.id).startsWith('agg-'))!
+      const durationMs = bar.end!.getTime() - bar.start!.getTime()
+      // Date truncates to whole milliseconds, so allow sub-ms rounding slack.
+      expect(durationMs).toBeGreaterThanOrEqual(computeMinBarMs(preset) - 1)
+    }
   })
 })

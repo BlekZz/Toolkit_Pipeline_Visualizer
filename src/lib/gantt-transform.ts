@@ -27,11 +27,39 @@ export function pipelineColor(id: string): string {
   return STRIPES[Math.abs(h) % STRIPES.length]
 }
 
+// Used by calendar-transform.ts for FullCalendar event minimum duration —
+// unrelated to the Gantt's pixel-based minimum below (FC has no notion of
+// "pixels per day" the way the Gantt's cellWidth does).
 export const MIN_VISUAL_MS = 30 * 60 * 1000
 
 // Presets at this scale or coarser render one aggregated bar per schedule
 // instead of one bar per occurrence — see toGanttData.
 const AGGREGATE_PRESETS = new Set<ViewPresetKey>(['month', 'quarter', 'year'])
+
+// Minimum rendered bar width, in pixels, for any Gantt preset. Below this a
+// bar becomes visually indistinguishable from a hairline (the original bug:
+// a 30-minute minimum duration at Month scale's 40px/day rendered ~0.8px wide).
+export const MIN_BAR_PX = 6
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+// Base time unit rendered by the bottom-most scale row per preset — see
+// computeGanttScales. Used to convert a pixel minimum into a duration.
+const PRESET_BASE_UNIT_MS: Record<ViewPresetKey, number> = {
+  week:    DAY_MS,
+  month:   DAY_MS,
+  quarter: 7 * DAY_MS,
+  year:    30.44 * DAY_MS, // average month length; only used for a visual floor
+}
+
+// Converts the fixed pixel minimum into a millisecond duration for the given
+// preset, using that preset's cellWidth (px per base unit). Replaces the old
+// fixed MIN_VISUAL_MS, which didn't scale with zoom level and made bars
+// invisible at coarser presets.
+export function computeMinBarMs(preset: ViewPresetKey, minPx = MIN_BAR_PX): number {
+  const cellWidth = computeGanttCellWidth(preset)
+  return (minPx / cellWidth) * PRESET_BASE_UNIT_MS[preset]
+}
 
 const URGENCY_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 }
 
@@ -59,6 +87,10 @@ export interface GanttTask {
   _occId?: string
   // Aggregated-bar occurrence count (only set on `agg-` tasks)
   _occCount?: number
+  // Urgency/pipeline visual metadata consumed by TimelineTab's taskTemplate
+  _urgency?: string
+  _urgencyBg?: string
+  _stripe?: string
 }
 
 export function toGanttData(
@@ -139,12 +171,13 @@ export function toGanttData(
       }
       const first   = list[0]
       const urgency = pickWorstUrgency(list)
+      const minMs   = computeMinBarMs(preset)
 
       tasks.push({
         id:       `agg-${schedId}`,
         text:     first.scheduleTitle,
         start:    new Date(startMs),
-        end:      new Date(Math.max(endMs, startMs + MIN_VISUAL_MS)),
+        end:      new Date(Math.max(endMs, startMs + minMs)),
         parent:   `sched-${schedId}`,
         type:     'task',
         progress: 0,
@@ -152,7 +185,7 @@ export function toGanttData(
         _urgency:   urgency,
         _urgencyBg: URGENCY_BG[urgency] ?? URGENCY_BG.low,
         _stripe:    pipelineColor(first.pipelineId),
-      } as GanttTask & Record<string, unknown>)
+      })
     }
 
     return tasks
@@ -167,8 +200,9 @@ export function toGanttData(
 
     const startMs  = new Date(occ.scheduledStart).getTime()
     const endMs    = new Date(occ.scheduledEnd).getTime()
-    const visualEnd = endMs < startMs + MIN_VISUAL_MS
-      ? new Date(startMs + MIN_VISUAL_MS)
+    const minMs    = computeMinBarMs(preset)
+    const visualEnd = endMs < startMs + minMs
+      ? new Date(startMs + minMs)
       : new Date(occ.scheduledEnd)
 
     const urgency  = occ.directTags?.urgency ?? 'low'
@@ -188,7 +222,7 @@ export function toGanttData(
       _urgency: urgency,
       _urgencyBg: URGENCY_BG[urgency] ?? URGENCY_BG.low,
       _stripe:  stripe,
-    } as GanttTask & Record<string, unknown>)
+    })
   }
 
   return tasks
