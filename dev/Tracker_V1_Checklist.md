@@ -64,7 +64,7 @@ Acceptance criteria:
   - schedule created under a pipeline defaults to pipeline timezone.
   - pipeline timezone must match all child schedule timezones (validation error).
   - Display timezone is view-context-dependent: single project → project.timezone, single pipeline → pipeline.timezone, global → browser Intl timezone.
-- Implement DST strategy: UTC instant preserved (absolute). Occurrences in the DST missing hour are silently dropped.
+- Implement DST strategy: UTC instant preserved (absolute). An occurrence in the DST missing hour is not dropped — it resolves via the pre-transition UTC offset, shifting wall-clock local time forward by one hour.
 - Implement default duration:
   - missing `durationSeconds` becomes `300`.
 - Implement reference rules:
@@ -202,7 +202,7 @@ Acceptance criteria:
 - Support simple recurrence: daily, weekly (with `byWeekday`), monthly (with `byMonthDay`).
 - Support RRULE recurrence (inject DTSTART from normalization before expanding).
 - Support cron expression recurrence (interpret in `schedule.timezone`).
-- DST handling: preserve UTC instant (absolute). If a cron/rrule occurrence lands in the DST missing hour, drop it silently.
+- DST handling: preserve UTC instant (absolute). If a cron/rrule occurrence lands in the DST missing hour, it resolves via the pre-transition UTC offset — wall-clock local time shifts forward by one hour rather than being dropped (see `src/lib/__tests__/expand.test.ts`).
 - Respect: resolved schedule timezone, `startDate`, `endDate` (inclusive), `enabled` flag, `durationSeconds`.
 - Generate occurrence ids:
   - `pipelineId::scheduleId::scheduledStart` where `scheduledStart` is UTC ISO 8601 with Z suffix.

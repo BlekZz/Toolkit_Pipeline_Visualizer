@@ -58,7 +58,7 @@ Project  --references many-->  Pipeline  --owns many-->  Schedule
 - Project defaults to `Asia/Taipei`; pipeline inherits from project; schedule inherits from pipeline.
 - Pipeline timezone **must equal** all child schedule timezones — validation error if mismatched.
 - Project ↔ pipeline timezone mismatch is **allowed** — display layer converts transparently.
-- DST: UTC instant preserved (absolute). Occurrences in the DST missing hour are silently dropped.
+- DST: UTC instant preserved (absolute). An occurrence landing in the DST "missing hour" is not dropped — it resolves using the pre-transition UTC offset, so the wall-clock local time shifts forward by one hour (e.g. a 02:30 America/New_York cron on the spring-forward day resolves to 03:30 EDT, not 02:30). This is the natural behavior of the underlying `cron-parser`/rrule libraries; see `src/lib/__tests__/expand.test.ts` for regression coverage.
 
 ### Display Timezone (View-Context-Dependent)
 

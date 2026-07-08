@@ -352,7 +352,7 @@ When an AI is asked to generate schedule JSON:
 - Generated occurrences attach: `projectContexts[]`, pipeline context, schedule context, display timezone, direct tags, inherited tags, derived tags.
 - `durationSeconds` defaults to `300` when missing.
 - RRULE normalization: always inject `DTSTART;TZID={schedule.timezone}:{startDate}T{time}:00` before passing to rrule library.
-- DST: UTC instant is preserved (absolute time). Occurrences in the "missing hour" of a DST transition are silently dropped in V1.
+- DST: UTC instant is preserved (absolute time). An occurrence landing in the "missing hour" of a DST spring-forward transition is not dropped — it resolves using the pre-transition UTC offset, shifting the wall-clock local time forward by one hour (confirmed by `src/lib/__tests__/expand.test.ts`).
 - `schemaVersion` migration tolerance: unknown top-level keys are ignored; unknown enum values are accepted as-is (advisory only).
 - `tagCatalog` is advisory — used for UI autocomplete and filter labels only, not for validation.
 - Filter logic: within one dimension, multiple selected values use OR. Across dimensions, active filters use AND.

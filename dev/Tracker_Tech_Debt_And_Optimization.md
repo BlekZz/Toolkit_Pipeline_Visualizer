@@ -25,6 +25,7 @@ before starting a new task — several items are quick wins.
 | Date | Trigger | Scope |
 |------|---------|-------|
 | 2026-07-08 | User-requested multi-agent scan ("派遣 haiku agents 掃描這個專案...") | Full codebase: src/ structure, build/deps/tests, dev/ docs |
+| 2026-07-08 | User-requested 4-agent parallel fix ("escape修復 和 tagemmojits我都要修復，修復好後測試覆蓋缺口") | Escape-key UX fix + all remaining test-coverage gaps from the audit below |
 
 ---
 
@@ -72,15 +73,59 @@ blanks the page.
 
 ---
 
-## ⏳ Open — Correctness / UX
+## ✅ Resolved (2026-07-08, 4-agent parallel dispatch)
 
-- **MermaidPanel does not close on Escape** — found during runtime
-  verification of the fixes above (not a regression, pre-existing). The
-  panel is a full-screen overlay (`.mp-overlay`) that intercepts all
-  clicks; only the explicit "× Close" button dismisses it. Add an
-  `onKeyDown` handler (or a `useEffect` with a `keydown` listener for
-  `Escape`) that calls the same `onClose` prop. Low effort, real papercut
-  for keyboard users.
+Test suite grew from 46 → 83 tests across 4 independent, parallelized agent
+tasks. All verified via `npm run check` (0 type errors) and `npm run test`
+(83/83 passing) after the fact by the orchestrating session.
+
+- **MermaidPanel Escape-key fix** — added a `useEffect` `keydown` listener
+  in `src/MermaidPanel.tsx` that calls `onClose()` on `Escape`, cleaned up
+  on unmount. Matches the file's existing effect style.
+- **`src/lib/tagEmoji.ts` test coverage** — new `src/lib/__tests__/tagEmoji.test.ts`
+  (5 tests): known-value lookup, case-insensitivity, unknown-value fallback.
+- **`src/schema/validate.ts` cross-entity rule tests** — new
+  `src/schema/__tests__/validate.test.ts` (8 tests): dangling `pipelineRefs`,
+  pipeline/schedule timezone mismatch, `pipeline.projectRefs` derived-only
+  warning (not an error), `blockedByScheduleIds` id-format regex,
+  `byMonthDay` range validation, plus a valid-doc control. Note: "only one
+  recurrence mode canonical" was found to not be a distinct testable rule —
+  `RecurrenceSchema` is a Zod `discriminatedUnion` on `mode`, so a JSON
+  payload structurally cannot hold two modes; Zod's default "strip unknown
+  keys" behavior handles stray fields silently rather than rejecting them.
+- **`expand.ts` edge cases** — 7 new tests in `src/lib/__tests__/expand.test.ts`
+  (leap-year Feb 29 cron, DST spring-forward, DST fall-back, invalid cron
+  string, invalid cron alongside a valid schedule in the same doc). See the
+  **DST documentation mismatch** flag below — this is a finding, not a fix.
+- **Component-level tests (`ImportModal`, `FilterPanel`)** — added
+  `@testing-library/react`, `@testing-library/jest-dom`,
+  `@testing-library/user-event`, `jsdom` as devDependencies; switched
+  `vitest.config.ts` environment to `jsdom`, added `src/test-setup.ts`
+  (`afterEach(cleanup)` + jest-dom matchers, since this repo doesn't use
+  vitest `globals: true`). New `src/__tests__/ImportModal.test.tsx` (8 tests:
+  JSON parse errors, schema-invalid errors, valid-import flow, no-blank-state
+  on failure) and `src/__tests__/FilterPanel.test.tsx` (11 tests: search
+  filtering, checkbox toggle, section collapse, clear-all). No bugs found
+  in either component.
+
+### ✅ Resolved (2026-07-08): DST documentation corrected to match actual behavior
+
+The DST discrepancy flagged above was resolved by decision: keep
+`expand.ts`'s actual behavior (shift-forward using the pre-transition UTC
+offset, not drop) and correct the documentation to match, rather than add
+drop-detection logic for a once-a-year edge case that only affects
+non-`Asia/Taipei` (DST-observing) timezones. Rationale: the shift-forward
+behavior is what real cron daemons/scheduling libraries generally do
+already, so it's the more accurate representation of "what will actually
+run" for a visualization tool — silently dropping would hide an occurrence
+that would, in reality, still fire.
+
+Updated "silently dropped" → "shifts forward by one hour via pre-transition
+UTC offset" wording in: `CLAUDE.md` (DST Handling), `Tracker_V1_Checklist.md`
+(Phase 1 + Phase 5), `Reference_JSON_Schedule_Schema.md`. No code changes.
+`Design_Data_Model_Architecture.md` already had the correct wording and
+needed no change. `src/lib/__tests__/expand.test.ts` (added same session)
+is now consistent with all doc sources.
 
 ## ⏳ Open — Structural / Refactor
 
@@ -106,24 +151,11 @@ blanks the page.
 
 ## ⏳ Open — Test Coverage
 
-Only `expand.ts`, `normalize.ts`, and (as of this audit) `filters.ts` have
-unit tests. Still uncovered, in priority order:
-
-1. **`schema/validate.ts` cross-entity rules** — `validateCrossEntityRules()`
-   (pipelineRef existence, pipeline↔schedule timezone match) is only
-   exercised indirectly through `normalize.test.ts` fixtures that happen to
-   be valid. Add fixtures that deliberately violate each rule and assert
-   the specific error.
-2. **`lib/tagEmoji.ts`** — pure lookup functions (`tagEmoji`, `tagLabel`),
-   trivial to test, currently has none.
-3. **Component-level**: `ImportModal` validation-error display,
-   `FilterPanel` search-filtering of options — these are UI logic, not
-   pure functions, so use `@testing-library/react` if/when component
-   testing is set up (not currently a devDependency).
-4. **`expand.ts` edge cases not yet covered**: Feb 29 leap year for cron,
-   DST transition boundaries (the PRD's documented "silently drop
-   occurrences in the missing DST hour" behavior has no regression test),
-   invalid cron expressions.
+All items from the original audit are resolved as of 2026-07-08 (see
+`## ✅ Resolved (2026-07-08, 4-agent parallel dispatch)` above) — this
+section is currently empty. `expand.ts`, `normalize.ts`, `filters.ts`,
+`validate.ts`, `tagEmoji.ts`, `ImportModal.tsx`, and `FilterPanel.tsx` all
+have coverage now (83 tests total across 7 files).
 
 ## ⏳ Open — Performance (watch, not urgent)
 

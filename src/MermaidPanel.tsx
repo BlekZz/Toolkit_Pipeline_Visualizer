@@ -175,6 +175,15 @@ export function MermaidPanel({ doc, onClose }: MermaidPanelProps) {
       })
   }, [mode, doc, uid])
 
+  // Escape key closes the panel
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
+
   // Drag handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return

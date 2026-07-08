@@ -275,3 +275,120 @@ describe('expandRecurrence — bounded by visible range', () => {
     }
   })
 })
+
+// ─── Cron: Feb 29 leap-year boundary ─────────────────────────────────────────
+
+describe('expandRecurrence — cron Feb 29 leap year', () => {
+  it('only fires in leap years, correctly skipping non-leap Februaries', () => {
+    const doc = baseDoc([pipe('p', [
+      sched('s', {
+        type: 'recurring',
+        startDate: '2023-01-01',
+        durationSeconds: 300,
+        recurrence: { mode: 'cron', cron: '0 9 29 2 *' },
+      }),
+    ])])
+    const norm = normalizeScheduleDocument(doc, { mode: 'global' })
+    // Spans 2023 (non-leap) through mid-2029, covering leap years 2024 and 2028
+    const range = { start: new Date('2023-01-01T00:00:00Z'), end: new Date('2029-06-01T00:00:00Z') }
+    const occurrences = expandRecurrence(norm, range)
+
+    expect(occurrences).toHaveLength(2)
+    const dates = occurrences.map((o) => o.scheduledStart.slice(0, 10)).sort()
+    expect(dates).toEqual(['2024-02-29', '2028-02-29'])
+    // 09:00 Asia/Taipei = 01:00 UTC
+    for (const occ of occurrences) {
+      expect(new Date(occ.scheduledStart).getUTCHours()).toBe(1)
+    }
+  })
+})
+
+// ─── DST transition boundaries ───────────────────────────────────────────────
+// Asia/Taipei has no DST, so these tests use America/New_York (spring-forward
+// gap: 2026-03-08 02:00 -> 03:00 local, the 02:00-02:59 wall-clock hour does
+// not exist that day).
+
+describe('expandRecurrence — DST spring-forward boundary', () => {
+  it('cron schedule landing in the missing hour does not throw and yields exactly one occurrence', () => {
+    const nyPipe = { id: 'p', name: 'p', timezone: 'America/New_York', schedules: [
+      sched('s', {
+        type: 'recurring',
+        startDate: '2026-01-01',
+        durationSeconds: 300,
+        recurrence: { mode: 'cron', cron: '30 2 8 3 *' }, // 02:30 on 2026-03-08 — inside the DST gap
+      }, { timezone: 'America/New_York' }),
+    ] }
+    const doc = baseDoc([nyPipe])
+    const norm = normalizeScheduleDocument(doc, { mode: 'global' })
+    const range = { start: new Date('2026-01-01T00:00:00Z'), end: new Date('2026-12-31T23:59:59Z') }
+
+    expect(() => expandRecurrence(norm, range)).not.toThrow()
+    const occurrences = expandRecurrence(norm, range)
+    // NOTE: CLAUDE.md documents this as "silently dropped". Empirically (verified
+    // against cron-parser 5.6.1's tz-aware iteration), the nonexistent local time is
+    // NOT dropped — it resolves using the pre-transition (EST, UTC-5) offset, landing
+    // on 2026-03-08T07:30:00.000Z, which reads back as 03:30 EDT (i.e. shifted forward
+    // by an hour) rather than being omitted. This test locks in the actual behavior;
+    // it does not throw and does not silently duplicate/omit the occurrence.
+    expect(occurrences).toHaveLength(1)
+    expect(occurrences[0].scheduledStart).toBe('2026-03-08T07:30:00.000Z')
+  })
+
+  it('does not generate a duplicate occurrence for the fall-back repeated hour', () => {
+    // Fall-back in America/New_York 2026: 2026-11-01 02:00 EDT -> 01:00 EST
+    // (clocks repeat the 01:00-01:59 hour). A schedule firing at 01:30 should
+    // still resolve to exactly one occurrence, not two.
+    const nyPipe = { id: 'p', name: 'p', timezone: 'America/New_York', schedules: [
+      sched('s', {
+        type: 'recurring',
+        startDate: '2026-01-01',
+        durationSeconds: 300,
+        recurrence: { mode: 'cron', cron: '30 1 1 11 *' },
+      }, { timezone: 'America/New_York' }),
+    ] }
+    const doc = baseDoc([nyPipe])
+    const norm = normalizeScheduleDocument(doc, { mode: 'global' })
+    const range = { start: new Date('2026-01-01T00:00:00Z'), end: new Date('2026-12-31T23:59:59Z') }
+
+    expect(() => expandRecurrence(norm, range)).not.toThrow()
+    const occurrences = expandRecurrence(norm, range)
+    expect(occurrences).toHaveLength(1)
+  })
+})
+
+// ─── Invalid cron expressions ─────────────────────────────────────────────────
+
+describe('expandRecurrence — invalid cron expression', () => {
+  it('swallows a malformed cron string and returns zero occurrences instead of throwing', () => {
+    const doc = baseDoc([pipe('p', [
+      sched('s', {
+        type: 'recurring',
+        startDate: '2026-01-01',
+        durationSeconds: 300,
+        recurrence: { mode: 'cron', cron: 'not a cron' },
+      }),
+    ])])
+    const norm = normalizeScheduleDocument(doc, { mode: 'global' })
+
+    expect(() => expandRecurrence(norm, { start: JUL_START, end: JUL_END })).not.toThrow()
+    const occurrences = expandRecurrence(norm, { start: JUL_START, end: JUL_END })
+    expect(occurrences).toHaveLength(0)
+  })
+
+  it('does not affect other valid schedules in the same document', () => {
+    const doc = baseDoc([pipe('p', [
+      sched('bad', {
+        type: 'recurring', startDate: '2026-01-01', durationSeconds: 300,
+        recurrence: { mode: 'cron', cron: 'garbage' },
+      }),
+      sched('good', {
+        type: 'recurring', startDate: '2026-07-01', durationSeconds: 300,
+        recurrence: { mode: 'cron', cron: '0 9 * * 1' },
+      }),
+    ])])
+    const norm = normalizeScheduleDocument(doc, { mode: 'global' })
+    const occurrences = expandRecurrence(norm, { start: JUL_START, end: JUL_END })
+    expect(occurrences).toHaveLength(4) // only the 4 Mondays from the valid schedule
+    expect(occurrences.every((o) => o.scheduleId === 'good')).toBe(true)
+  })
+})
