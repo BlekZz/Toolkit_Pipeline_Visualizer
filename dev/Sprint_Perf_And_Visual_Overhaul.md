@@ -9,7 +9,11 @@ sync_with:
 # Sprint: 效能優化 + 視覺重設計 + Heatmap 新視圖
 
 > 建立日期：2026-07-08
-> 狀態：**待執行** — 本文件為派工藍本，各里程碑可指派給不同 agent 執行。
+> 狀態：**已完成（2026-07-08）** — M0–M4 由 Sonnet agent 平行/序列執行，
+> M5 由 Opus agent（Evidence Collector）獨立驗收。Commit：M0 `99e086f`、
+> M1 `3ce4d55`、M3 `fe9788d`、M4 `9c037a3`+`953daa5`、M2 `3c7b302`、
+> Escape 修復與文件同步為主線收尾 commit。M5 驗收發現 2 項缺口
+> （`OccurrencePopup` 缺 Escape 鍵、文件未同步）已在收尾中修復。
 > 觸發：使用者回報 (1) 啟動 loading 緩慢；(2) 切換視圖 / 篩選組合 / Projects 時明顯 lag；
 > (3) Timeline 只剩文字與框框、看不到 bar；(4) 希望 Calendar 視覺美化 + view 順序調整；
 > (5) 新增 Habit Tracker / GitHub 活躍圖風格的新視圖。
@@ -262,12 +266,16 @@ template 或 CSS 消費**（`src/App.tsx:153-159`）— 顏色資料是死資料
 
 ---
 
-## 附錄 A — 效能量測數據（M1 填寫）
+## 附錄 A — 效能量測數據（M1 實作 + M5 驗收覆核，2026-07-08）
 
-| 指標 | Before | After | 目標 |
-|---|---|---|---|
-| 冷啟動至可互動 | （待測） | | < 1.5s |
-| preset 切換 Month→Year | （待測） | | < 300ms |
-| tab 切換 | （待測） | | < 200ms |
-| Gantt task 數（Month scale） | ~11.6k | | < 1,000 |
-| expandRecurrence 單次耗時 | （待測） | | — |
+| 指標 | Before | After | 目標 | 判定 |
+|---|---|---|---|---|
+| 冷啟動至可互動 | — | 1369–1417ms（4 次量測） | < 1.5s | ✅ PASS |
+| preset 切換 Month→Year | — | 43–46ms | < 300ms | ✅ PASS |
+| tab 切換 Timeline↔Calendar | — | 75–96ms | < 200ms | ✅ PASS |
+| Gantt task 數（Month/Quarter/Year scale） | ~11,625 | ~29 列（collapsed）/ 11 個聚合 bar（expanded） | < 1,000 | ✅ PASS |
+| `Intl.DateTimeFormat` 建構 vs 快取（11,595 次呼叫） | 492ms | 35ms（~14×） | — | 參考數據 |
+
+量測方式：`dev/script/perf-probe.mjs`（Playwright，對 `vite preview` 執行）；
+Gantt task 數與 formatter 數據為隔離測試腳本量測（未留存於 repo，數字記錄於
+本文件）。M5 驗收（Evidence Collector, Opus）覆核重跑三次確認數據穩定。

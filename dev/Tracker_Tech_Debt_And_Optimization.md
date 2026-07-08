@@ -127,24 +127,40 @@ UTC offset" wording in: `CLAUDE.md` (DST Handling), `Tracker_V1_Checklist.md`
 needed no change. `src/lib/__tests__/expand.test.ts` (added same session)
 is now consistent with all doc sources.
 
+## ✅ Resolved (2026-07-08, [[Sprint_Perf_And_Visual_Overhaul]] M0–M4)
+
+- **`App.tsx` split** (M0, commit `99e086f`) — extracted `lib/gantt-transform.ts`
+  (`toGanttData()`, scale/cellWidth computation, `pipelineColor()`),
+  `lib/calendar-transform.ts` (`toEvent()`, `fcEvents` filtering),
+  `OccurrencePopup.tsx`, `TimelineTab.tsx`, `CalendarTab.tsx`. App.tsx went
+  from 621 → 464 lines (state orchestration + header + tab switching only).
+  Not yet under the original 300-line aspirational target — a `Header`
+  extraction would close the gap further but was out of M0's explicit scope;
+  left as a future quick win, not re-opened as a tracked item.
+- **Both Performance items below** (M1, commit `3ce4d55`) — formatter cache,
+  range-aware expand cache, `useDeferredValue`/`useTransition`, and
+  scale-aware Gantt aggregation. See the old open items, now resolved, and
+  the sprint doc's Part 1.1 diagnosis + Appendix A for measured numbers.
+- **Timeline visual redesign** (M2, commit `3c7b302`) — pixel-based minimum
+  bar width, urgency/pipeline colors rendered via SVAR's `taskTemplate`,
+  aggregated-bar count badges + hatch pattern. Today marker line was
+  evaluated and dropped — SVAR React Gantt's free tier force-clears the
+  `markers` API server-side (verified in `gantt-store` bundled source), not
+  an oversight.
+- **Calendar visual redesign** (M3, commit `fe9788d`) — view switcher
+  reordered to Day → Week → Month → Quarter → Year; EventChip redesign;
+  color legend; today/weekend accents; FC view persisted to localStorage.
+- **New Heatmap tab** (M4, commits `9c037a3` + `953daa5`) — GitHub-style
+  Overview + per-pipeline Tracker modes, wired as the app's third tab.
+- **`OccurrencePopup` missing Escape-key close** — found during M5
+  acceptance review (not part of the original M0 fix, which covered
+  `MermaidPanel` only); added the same `keydown` listener pattern.
+
 ## ⏳ Open — Structural / Refactor
 
-> **2026-07-08 note**: the `App.tsx` split below and both Performance items are
-> now claimed by [[Sprint_Perf_And_Visual_Overhaul]] (M0 / M1) — execute them
-> through that sprint's milestones, not ad hoc; move them to ✅ when the sprint
-> lands.
-
-- **`App.tsx` is 621 lines** hosting the entire app shell: state
-  orchestration, `toGanttData()`/`toEvent()` transforms, the
-  `OccurrencePopup` sub-component, and the FullCalendar/SVAR Gantt wiring
-  all in one file. Candidate extractions (in order of value):
-  - `lib/gantt-transform.ts` — `toGanttData()` and the Gantt scale/cellWidth
-    computation (currently App.tsx ~line 61-159, 343-387)
-  - `lib/calendar-transform.ts` — `toEvent()` / `fcEvents` construction
-  - `OccurrencePopup.tsx` — currently an inline component in App.tsx
-  This is a pure refactor (no behavior change) — safe for a Sonnet-tier
-  agent to do in one pass, verify via the `verify` skill against the
-  Timeline/Calendar tabs afterward.
+- **`App.tsx` is 464 lines** (down from 621, see above) — header JSX
+  (~180 lines) is the main remaining chunk; extracting a `Header.tsx`
+  component would be a safe follow-up pure refactor if it grows further.
 - **`App.css` is ~950 lines**, single global stylesheet, BEM-ish naming
   (`.app-*`, `.dp-*`, `.fp-*`, `.mp-*`). Not currently causing problems
   (no specificity fights observed, no unused rules beyond the ones already
@@ -156,29 +172,46 @@ is now consistent with all doc sources.
 
 ## ⏳ Open — Test Coverage
 
-All items from the original audit are resolved as of 2026-07-08 (see
-`## ✅ Resolved (2026-07-08, 4-agent parallel dispatch)` above) — this
-section is currently empty. `expand.ts`, `normalize.ts`, `filters.ts`,
-`validate.ts`, `tagEmoji.ts`, `ImportModal.tsx`, and `FilterPanel.tsx` all
-have coverage now (83 tests total across 7 files).
+All items from the original audit are resolved — this section is currently
+empty. `expand.ts`, `normalize.ts`, `filters.ts`, `validate.ts`,
+`tagEmoji.ts`, `ImportModal.tsx`, `FilterPanel.tsx`, `gantt-transform.ts`,
+`calendar-transform.ts`, `expand-cache.ts`, and `heatmap-transform.ts` all
+have coverage (115 tests total across 11 files as of the
+[[Sprint_Perf_And_Visual_Overhaul]] sprint).
+
+## ✅ Resolved (2026-07-08, [[Sprint_Perf_And_Visual_Overhaul]] M1)
+
+- **No virtualization on Gantt task list** — superseded by scale-aware
+  aggregation instead: Month/Quarter/Year presets now collapse each
+  schedule to one bar rather than one bar per occurrence, so the rendered
+  task count dropped from ~11.6k to ~50 without needing row virtualization.
+  Week preset still emits per-occurrence bars but stays well within a
+  visible-week's row count.
+- **365-day eager expansion on every `viewRange` change** — replaced by
+  `lib/expand-cache.ts`: a shrinking range (e.g. Year → Month) is served
+  by filtering the already-cached expansion instead of re-running
+  `expandRecurrence`; only a range exceeding the cached bounds, or a new
+  `normalizedDoc` reference (import), triggers a real recompute.
+  `wallClockToUtc`'s `Intl.DateTimeFormat` construction is also now
+  cached per timezone (~14x faster over 11,595 calls in isolated
+  measurement: 492ms → 35ms).
 
 ## ⏳ Open — Performance (watch, not urgent)
 
-None of these are causing problems today (sample data tops out around
-11,595 occurrences post-expansion and the app stays responsive), but flag
-them for whoever adds bulk real-world data:
+Measured after the M1 optimization pass (see sprint doc Appendix A for
+full numbers): cold load ~1.4s, preset switch ~44ms, tab switch ~80ms,
+all within target. Nothing urgent, but flag for whoever adds bulk
+real-world data or extends the Heatmap tab:
 
-- **No virtualization** on the Gantt task list or Calendar event list. If a
-  real dataset produces tens of thousands of rows in Timeline's Month/Week
-  view, consider `@svar-ui/react-gantt`'s built-in virtualization options
-  (check its docs — SVAR Gantt generally virtualizes rows already, but the
-  *filtered* task tree rebuild in `toGanttData()` is not memoscoped beyond
-  `filteredOccs`/`collapseSchedules`).
-- **365-day eager expansion on every `viewRange` change** — acceptable now
-  because `viewRange` only changes on explicit user action (preset click,
-  date picker), not on every render. If a future feature ties `viewRange`
-  to continuous scrolling, revisit — `expandRecurrence` is O(schedules ×
-  occurrences-in-range) and re-runs synchronously.
+- **Heatmap tab has no dedicated perf probe** — M5 acceptance confirmed it
+  shares the same `startTransition`-wrapped tab-switch mechanism as
+  Timeline/Calendar and is O(n) to aggregate, but wasn't independently
+  timed with Playwright. Add a probe if a future dataset makes it the
+  slow tab.
+- **Calendar event list has no virtualization** — not a problem at sample-
+  data scale (FullCalendar's own date windowing keeps rendered events low
+  in Week/Day views; Month view already hides sub-daily/daily schedules).
+  Revisit if a single month-view window can exceed a few hundred events.
 
 ---
 
