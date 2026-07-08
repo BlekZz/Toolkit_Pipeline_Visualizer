@@ -20,6 +20,7 @@ import { ImportModal } from './ImportModal'
 import { OccurrencePopup } from './OccurrencePopup'
 import { TimelineTab } from './TimelineTab'
 import { CalendarTab } from './CalendarTab'
+import { HeatmapView } from './HeatmapView'
 import sampleData from './data/sample-schedules.json'
 import './App.css'
 
@@ -98,8 +99,8 @@ function App() {
   const [filterOpen,  setFilterOpen]  = useState(false)
   const [showMermaid, setShowMermaid] = useState(false)
   const [collapseSchedules, setCollapseSchedules] = useState(true)
-  const [activeTab,   setActiveTab]   = useState<'timeline' | 'calendar'>(
-    () => (localStorage.getItem('psv-tab') as 'timeline' | 'calendar' | null) || 'timeline'
+  const [activeTab,   setActiveTab]   = useState<'timeline' | 'calendar' | 'heatmap'>(
+    () => (localStorage.getItem('psv-tab') as 'timeline' | 'calendar' | 'heatmap' | null) || 'timeline'
   )
   const [activePreset, setActivePreset] = useState<ViewPresetKey>(
     () => (localStorage.getItem('psv-preset') as ViewPresetKey | null) || 'month'
@@ -293,6 +294,13 @@ function App() {
                 >
                   Calendar
                 </button>
+                <button
+                  className={`tab-btn${activeTab === 'heatmap' ? ' tab-btn--active' : ''}`}
+                  onClick={() => startTransition(() => { setActiveTab('heatmap'); setFilterOpen(false) })}
+                  type="button"
+                >
+                  Heatmap
+                </button>
               </div>
             </div>
             <div className="app-header-right">
@@ -396,11 +404,16 @@ function App() {
                 occsById={occsById}
                 onSelectOcc={setSelectedOcc}
               />
-            ) : (
+            ) : activeTab === 'calendar' ? (
               <CalendarTab
                 fcEvents={fcEvents}
                 onDatesSet={handleDatesSet}
                 onEventClick={handleFCEventClick}
+              />
+            ) : (
+              <HeatmapView
+                occs={filteredOccs}
+                onSelectOcc={setSelectedOcc}
               />
             )
           ) : (
@@ -425,8 +438,8 @@ function App() {
         )}
       </div>
 
-      {/* Calendar tab: occurrence popup */}
-      {selectedOcc && activeTab === 'calendar' && (
+      {/* Calendar / Heatmap tabs: occurrence popup */}
+      {selectedOcc && activeTab !== 'timeline' && (
         <OccurrencePopup occ={selectedOcc} onClose={() => setSelectedOcc(null)} />
       )}
 
