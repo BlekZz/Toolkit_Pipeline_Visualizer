@@ -116,67 +116,6 @@
   border-color: #2563eb;
 }
 
-/* app-body no longer used; kept for reference only */
-/* .app-body / .app-main replaced by zone-a / zone-b layout */
-
-/* ─── Legend sidebar ──────────────────────────────────────────────────────── */
-
-.legend {
-  width: 220px;
-  flex-shrink: 0;
-  padding: 16px 12px 16px 16px;
-  overflow-y: auto;
-  border-right: 1px solid #e2e8f0;
-  background: #fff;
-  font-size: 12px;
-}
-
-.legend-section {
-  margin-bottom: 20px;
-}
-
-.legend-heading {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #64748b;
-  margin-bottom: 6px;
-  cursor: default;
-}
-
-.legend-hint {
-  font-size: 10px;
-  color: #94a3b8;
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.legend-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: #334155;
-  font-size: 12px;
-  cursor: default;
-  line-height: 1.4;
-}
-
-.legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
 /* ─── Filter panel ────────────────────────────────────────────────────────── */
 
 .filter-panel {
@@ -452,6 +391,74 @@
   height: 100%;
 }
 
+/* ─── Gantt bar visual system (M2) ──────────────────────────────────────────
+ * Rendered via SVAR's taskTemplate — see TimelineTab.tsx's GanttBarContent.
+ * This div fully replaces the bar's default content slot, so it owns the
+ * bar's entire visible surface (fill + stripe + text), not just the label.
+ */
+.gantt-bar-fill {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-left: 3px solid;
+  border-radius: inherit;
+  overflow: hidden;
+  color: #1f2937;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.gantt-bar-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Aggregated (Month/Quarter/Year) bars get a diagonal hatch so they read as
+ * "many occurrences summarized" rather than a single real event.
+ */
+.gantt-bar-fill--agg {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(15, 23, 42, 0.06) 0,
+    rgba(15, 23, 42, 0.06) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.gantt-bar-count {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bar hover feedback (row-wide hover across the split grid/chart panes isn't
+ * exposed by SVAR's core API without fragile DOM syncing across the two
+ * panes, so this is scoped to the bar itself).
+ */
+.wx-bar:hover .gantt-bar-fill {
+  filter: brightness(0.94);
+}
+
+/* Weekend day-cell shading — applied via the Gantt's highlightTime prop,
+ * only active on day-granularity scale rows (Week/Month presets).
+ */
+.wx-cell.gantt-weekend {
+  background: rgba(15, 23, 42, 0.045);
+}
+
+/* NOTE: a "today" vertical reference line was attempted via SVAR's `markers`
+ * config but is silently disabled outside the PRO license (confirmed in
+ * @svar-ui/gantt-store's license-gate code, which force-empties `markers`
+ * along with other PRO-only features) — see TimelineTab.tsx for detail.
+ */
+
 /* ─── Tab switcher ────────────────────────────────────────────────────────── */
 
 .tab-switcher {
@@ -485,10 +492,20 @@
 
 /* ─── FullCalendar wrapper ────────────────────────────────────────────────── */
 
-/* .fc-wrapper position/size set in zone-b block above; only visual styles here */
+/* .fc-wrapper position/size set in zone-b block above; only visual styles here.
+   Flex column so the legend row sits above FullCalendar without stealing its
+   height="100%" sizing (fc-body takes the remaining space). */
 .fc-wrapper {
-  padding: 8px;
+  display: flex;
+  flex-direction: column;
   background: #fff;
+}
+
+.fc-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  padding: 8px;
 }
 
 /* Transparent event background so EventChip controls the look */
@@ -499,6 +516,152 @@
 
 .fc-event-main {
   padding: 0 !important;
+}
+
+/* ─── EventChip ───────────────────────────────────────────────────────────── */
+
+.fc-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 1px 5px;
+  border-left: 3px solid transparent;
+  border-radius: 4px;
+  background: #f8fafc;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.fc-chip--compact {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.fc-chip--compact .fc-chip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fc-chip--full {
+  white-space: normal;
+}
+
+.fc-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.fc-chip-time {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: #64748b;
+}
+
+.fc-chip-title {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── Calendar color legend ───────────────────────────────────────────────── */
+
+.fc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 4px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 11px;
+  color: #475569;
+}
+
+.fc-legend-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fc-legend-sep {
+  width: 1px;
+  height: 12px;
+  background: #e2e8f0;
+}
+
+.fc-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.fc-legend-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.fc-legend-stripe {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.fc-legend-overflow {
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+/* ─── today / weekend accents ─────────────────────────────────────────────── */
+
+.fc .fc-day-today {
+  background: #eff6ff !important;
+}
+
+.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.fc .fc-day-sat,
+.fc .fc-day-sun {
+  background: #f8fafc;
+}
+
+/* ─── "+N more" popover ───────────────────────────────────────────────────── */
+
+.fc .fc-daygrid-more-link {
+  font-size: 10px;
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.fc-popover {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.15);
+  overflow: hidden;
+}
+
+.fc-popover-header {
+  padding: 4px 8px;
+  background: #f1f5f9;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.fc-popover-body {
+  padding: 4px;
 }
 
 /* Tighten FullCalendar toolbar to match app chrome */

@@ -23,7 +23,7 @@ function safeId(raw: string): string {
 }
 
 function labelText(text: string): string {
-  return text.replace(/["\[\]{}|]/g, ' ').trim()
+  return text.replace(/["[\]{}|]/g, ' ').trim()
 }
 
 function buildStructureDiagram(doc: NormalizedDocument): string {
@@ -174,6 +174,15 @@ export function MermaidPanel({ doc, onClose }: MermaidPanelProps) {
         }
       })
   }, [mode, doc, uid])
+
+  // Escape key closes the panel
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
 
   // Drag handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {

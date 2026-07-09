@@ -1,0 +1,303 @@
+/* ─── Heatmap tab: Overview (annual grid) + Tracker (habit rows) ──────────── */
+
+.heatmap-view {
+  position: relative;
+  height: 100%;
+  overflow: auto;
+  padding: 12px 16px;
+  box-sizing: border-box;
+}
+
+.heatmap-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.heatmap-mode-tabs,
+.heatmap-granularity-tabs,
+.heatmap-year-picker {
+  display: flex;
+  gap: 4px;
+}
+
+.heatmap-tab-btn,
+.heatmap-year-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid #d0d7de;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #24292f;
+}
+
+.heatmap-tab-btn.active,
+.heatmap-year-btn.active {
+  background: #216e39;
+  border-color: #216e39;
+  color: #fff;
+}
+
+/* ── Overview grid ─────────────────────────────────────────────────────── */
+
+.heatmap-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.heatmap-overview-grid {
+  display: grid;
+  grid-auto-rows: 11px;
+  gap: 3px;
+  align-items: center;
+}
+
+.heatmap-corner {
+  width: 28px;
+}
+
+.heatmap-month-label {
+  font-size: 10px;
+  color: #57606a;
+  white-space: nowrap;
+}
+
+.heatmap-day-label {
+  font-size: 10px;
+  color: #57606a;
+  width: 28px;
+  text-align: right;
+  padding-right: 4px;
+}
+
+.heatmap-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.heatmap-cell--muted {
+  border: 1px solid #ebedf0;
+  background-color: transparent !important;
+}
+
+.heatmap-cell--tracker {
+  width: 14px;
+  height: 14px;
+  border: 1px solid #ebedf0;
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #57606a;
+  align-self: flex-end;
+}
+
+.heatmap-legend-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+}
+
+/* ── Tracker rows ───────────────────────────────────────────────────────── */
+
+.heatmap-tracker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.heatmap-tracker-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.heatmap-tracker-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: max-content;
+}
+
+.heatmap-tracker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.heatmap-tracker-row-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 160px;
+  min-width: 160px;
+  overflow: hidden;
+}
+
+.heatmap-tracker-row-name {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heatmap-tracker-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.heatmap-tracker-cells {
+  display: flex;
+  gap: 3px;
+}
+
+.heatmap-truncation-notice {
+  font-size: 12px;
+  color: #57606a;
+  font-style: italic;
+}
+
+.heatmap-empty {
+  font-size: 13px;
+  color: #57606a;
+}
+
+/* ── Tooltip ────────────────────────────────────────────────────────────── */
+
+.heatmap-tooltip {
+  position: fixed;
+  z-index: 1000;
+  background: #24292f;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  max-width: 240px;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.heatmap-tooltip-date {
+  font-weight: 600;
+}
+
+.heatmap-tooltip-count {
+  opacity: 0.85;
+  margin-bottom: 4px;
+}
+
+.heatmap-tooltip-list {
+  margin: 0;
+  padding-left: 14px;
+}
+
+/* ── Day list popup (fallback when no onDayClick is provided) ────────────── */
+
+.heatmap-daypopup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.heatmap-daypopup-card {
+  background: #fff;
+  border-radius: 8px;
+  min-width: 280px;
+  max-width: 400px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 12px 16px;
+}
+
+.heatmap-daypopup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.heatmap-daypopup-close {
+  border: none;
+  background: none;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.heatmap-daypopup-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.heatmap-daypopup-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 6px 4px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.heatmap-daypopup-item:hover {
+  background: #f6f8fa;
+}
+
+/* ── Dark mode ──────────────────────────────────────────────────────────── */
+
+@media (prefers-color-scheme: dark) {
+  .heatmap-tab-btn,
+  .heatmap-year-btn {
+    background: #21262d;
+    border-color: #30363d;
+    color: #c9d1d9;
+  }
+
+  .heatmap-month-label,
+  .heatmap-day-label,
+  .heatmap-legend,
+  .heatmap-truncation-notice,
+  .heatmap-empty {
+    color: #8b949e;
+  }
+
+  .heatmap-cell--muted {
+    border-color: #21262d;
+  }
+
+  .heatmap-daypopup-card {
+    background: #161b22;
+    color: #c9d1d9;
+  }
+
+  .heatmap-daypopup-item:hover {
+    background: #21262d;
+  }
+
+  .heatmap-daypopup-close {
+    color: #c9d1d9;
+  }
+}

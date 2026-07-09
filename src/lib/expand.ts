@@ -11,6 +11,26 @@ export interface DateRange {
 
 // ─── Timezone helpers ─────────────────────────────────────────────────────────
 
+// Module-level cache: constructing Intl.DateTimeFormat is expensive and
+// wallClockToUtc is called tens of thousands of times during a full expansion.
+// The formatter only depends on the target timezone, so one instance per
+// timezone can be reused across every call.
+const formatterCache = new Map<string, Intl.DateTimeFormat>()
+
+function getFormatter(timezone: string): Intl.DateTimeFormat {
+  let fmt = formatterCache.get(timezone)
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric', month: 'numeric', day: 'numeric',
+      hour: 'numeric', minute: 'numeric', second: 'numeric',
+      hour12: false,
+    })
+    formatterCache.set(timezone, fmt)
+  }
+  return fmt
+}
+
 /**
  * Convert a wall-clock date/time in a named IANA timezone to a UTC Date.
  * Uses Intl.DateTimeFormat to determine the UTC offset at that instant.
@@ -23,12 +43,7 @@ function wallClockToUtc(dateStr: string, timeStr: string, timezone: string): Dat
   const nominal = new Date(Date.UTC(year, month - 1, day, hour, minute, 0))
 
   // Step 2: find what that nominal UTC instant looks like in the target timezone
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    year: 'numeric', month: 'numeric', day: 'numeric',
-    hour: 'numeric', minute: 'numeric', second: 'numeric',
-    hour12: false,
-  }).formatToParts(nominal)
+  const parts = getFormatter(timezone).formatToParts(nominal)
 
   const get = (type: string): number => {
     const v = parts.find((p) => p.type === type)?.value ?? '0'
@@ -233,14 +248,16 @@ function expandRrule(
   if (def.type !== 'recurring') return []
   if (def.recurrence.mode !== 'rrule') return []
 
+  // Hoist past the mode guard — narrowing on def.recurrence doesn't survive into the .map closure
+  const rec = def.recurrence
   const duration = def.durationSeconds
 
   try {
-    const rule = RRule.fromString(def.recurrence.rrule)
+    const rule = RRule.fromString(rec.rrule)
     const occurrences = rule.between(range.start, range.end, true)
 
     // Apply endDate constraint if present
-    const hardEnd = def.recurrence.endDate ? new Date(def.recurrence.endDate + 'T23:59:59Z') : null
+    const hardEnd = rec.endDate ? new Date(rec.endDate + 'T23:59:59Z') : null
 
     return occurrences
       .filter((d) => !hardEnd || d <= hardEnd)
@@ -253,7 +270,7 @@ function expandRrule(
 
         const occ = buildOccurrence(pipeline, schedule, realUtc, duration)
         occ.recurrenceMode = 'rrule'
-        occ.recurrenceSource = def.recurrence.rrule
+        occ.recurrenceSource = rec.rrule
         occ.displayTimezone = displayTimezone
         return occ
       })

@@ -4,24 +4,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Status
 
-**V1 + Dual-Tab + UX Polish Complete (2026-06-26)** — all 11 phases shipped + SVAR Gantt migration (ADR-001) + dual-tab architecture (ADR-002) + post-V1 UX enhancements. App runs locally with full sample data, dual-tab UI (Timeline + Calendar), filter panel, detail panel, Mermaid diagram panel, JSON export, localStorage presets, frequency-based auto-filter, and 29 unit tests passing. See `dev/Tracker_V1_Checklist.md` for full phase + enhancement log; `dev/decisions/` for architecture decisions.
+**V1 + Tri-Tab + Perf/Visual Overhaul Complete (2026-07-08)** — all 11 V1 phases shipped + SVAR Gantt migration (ADR-001) + dual-tab architecture (ADR-002) + post-V1 UX enhancements + [[Sprint_Perf_And_Visual_Overhaul]] (M0–M5: App.tsx decomposition, range-aware expand cache, scale-aware Gantt aggregation, Timeline/Calendar visual redesign, new Heatmap tab). App runs locally with full sample data, tri-tab UI (Timeline + Calendar + Heatmap), filter panel, detail panel, Mermaid diagram panel, JSON export, localStorage presets, frequency-based auto-filter, and 115 unit tests passing. See `dev/Tracker_V1_Checklist.md` for full V1 phase log; `dev/Sprint_Perf_And_Visual_Overhaul.md` for the perf/visual sprint detail; `dev/decisions/` for architecture decisions; `dev/Tracker_Tech_Debt_And_Optimization.md` for the standing tech-debt/optimization backlog (check before starting new work — several items are quick wins).
 
 ## Stack
 
 React 19 + TypeScript 6 + Vite 8 + SVAR React Gantt 2.7.0 (MIT) + FullCalendar Community 6 + rrule + cron-parser + Zod 4
 
-### UI Architecture: Dual-Tab
+### UI Architecture: Tri-Tab
 
 Zone A (top, ≤33vh): filter panel, header controls, tab switcher.
-Zone B (fills remaining height): two tabs sharing the same data and filter state.
+Zone B (fills remaining height): three tabs sharing the same data and filter state.
 
 | Tab | Library | Purpose |
 |-----|---------|---------|
-| Timeline | SVAR React Gantt 2.7.0 | Y = Project → Pipeline → Schedule hierarchy; X = time (continuous Gantt) |
-| Calendar | FullCalendar Community 6 | Month / Week / Day grid views |
+| Timeline | SVAR React Gantt 2.7.0 | Y = Project → Pipeline → Schedule hierarchy; X = time (continuous Gantt). Week preset renders per-occurrence bars; Month/Quarter/Year presets aggregate each schedule into one bar (`agg-` id, `×N` count badge) to keep rendered task count low at coarse zoom. |
+| Calendar | FullCalendar Community 6 | View switcher order: Day → Week → Month → Quarter → Year. EventChip shows an urgency dot + pipeline stripe + time label; a legend row shows urgency colors and visible pipeline swatches. |
+| Heatmap | Custom (`HeatmapView.tsx`) | GitHub-contribution-style Overview (53×7 day grid, 5-level intensity) and Habit-Tracker-style per-pipeline/schedule rows; click a day to drill into that day's occurrences. |
 
 Shared state: `normalizedDoc`, `filterState`, `filteredOccs`, `selectedOcc`, `viewRange`.
-`viewRange` (today → +365 days) drives `expandRecurrence` once; FullCalendar does its own internal date windowing — never updates `viewRange` via `datesSet`.
+`viewRange` (today → +365 days) drives `expandRecurrence` once, through a range-aware cache (`lib/expand-cache.ts`) that reuses the cached expansion when a new range is a subset of the last one instead of re-running recurrence expansion. FullCalendar does its own internal date windowing — never updates `viewRange` via `datesSet`.
 
 ## Commands
 
@@ -58,7 +59,7 @@ Project  --references many-->  Pipeline  --owns many-->  Schedule
 - Project defaults to `Asia/Taipei`; pipeline inherits from project; schedule inherits from pipeline.
 - Pipeline timezone **must equal** all child schedule timezones — validation error if mismatched.
 - Project ↔ pipeline timezone mismatch is **allowed** — display layer converts transparently.
-- DST: UTC instant preserved (absolute). Occurrences in the DST missing hour are silently dropped.
+- DST: UTC instant preserved (absolute). An occurrence landing in the DST "missing hour" is not dropped — it resolves using the pre-transition UTC offset, so the wall-clock local time shifts forward by one hour (e.g. a 02:30 America/New_York cron on the spring-forward day resolves to 03:30 EDT, not 02:30). This is the natural behavior of the underlying `cron-parser`/rrule libraries; see `src/lib/__tests__/expand.test.ts` for regression coverage.
 
 ### Display Timezone (View-Context-Dependent)
 
@@ -138,6 +139,7 @@ Source JSON is **never mutated** during normalization.
 | `dev/Reference_JSON_Schedule_Schema.md` | Canonical JSON shape with examples for all recurrence modes |
 | `dev/Tracker_V1_Checklist.md` | Phase-by-phase implementation checklist with acceptance criteria |
 | `dev/Tracker_Roadmap_Milestones.md` | Milestone definitions and exit criteria |
+| `dev/Tracker_Tech_Debt_And_Optimization.md` | Standing backlog of tech debt, deferred cleanups, and optimization opportunities — check before new work |
 
 ## V1 Boundaries
 
