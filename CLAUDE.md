@@ -166,3 +166,13 @@ All other agents in `~/.claude/agents/bench_*/` should be treated as inactive.
 All agents not listed above are suppressed for this session.
 Dropped in A13 (no functional counterpart in bench_awesome-toolkit): Software Architect, Rapid Prototyper, Minimal Change Engineer, Workflow Architect.
 If you need an unlisted agent, explicitly name it in your message and reference its bench folder.
+
+## 知識歸檔路由表
+Wrap-up（session 收尾 / 知識整合）時，project-local insight 依此表歸檔：
+
+| 洞見類型 | 歸檔目標檔案 |
+|----------|--------------|
+| Schema / 事實類知識 | `dev/Reference_<subject>.md` |
+| 已解 bug 的 fix pattern | 相關 Reference/schema 檔；並在 debug log 對應條目打 ✅ |
+| 零散技術筆記、跨 session 除錯脈絡 | `dev/tech-notes.md` |
+| 架構決策（含取捨理由） | `dev/decisions/ADR-NNN-<kebab-name>.md` |
