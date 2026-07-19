@@ -1,0 +1,4 @@
+- updated: 2026-07-19 (claude)
+- 停點: Perf/Visual Overhaul sprint（M1-M5：cache/Gantt aggregation、Timeline 重繪、Calendar 排序、Heatmap tab、Escape-key close）已完成，os-conform 升版至 2026-07-19.4（3 舊前綴檔記 WARN 緩改名）。
+- 下一步: 待定 — 可參考 dev/Tracker_Roadmap_Milestones.md 與 dev/Tracker_V1_Checklist.md 後續里程碑。
+- 切入: dev/Sprint_Perf_And_Visual_Overhaul.md, dev/Tracker_Roadmap_Milestones.md, dev/Tracker_V1_Checklist.md
