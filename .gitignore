@@ -24,5 +24,8 @@ dist-ssr
 *.sw?
 
 # Tool-specific
-.codex/
+.codex/*
+!.codex/resource-projections.json
+!.codex/agents/
+!.codex/agents/**
 .claude/settings.local.json
