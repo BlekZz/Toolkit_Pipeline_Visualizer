@@ -1,4 +1,4 @@
-- updated: 2026-07-19 (claude)
-- 停點: Perf/Visual Overhaul sprint（M1-M5：cache/Gantt aggregation、Timeline 重繪、Calendar 排序、Heatmap tab、Escape-key close）已完成，os-conform 升版至 2026-07-19.4（3 舊前綴檔記 WARN 緩改名）。
-- 下一步: 待定 — 可參考 dev/Tracker_Roadmap_Milestones.md 與 dev/Tracker_V1_Checklist.md 後續里程碑。
-- 切入: dev/Sprint_Perf_And_Visual_Overhaul.md, dev/Tracker_Roadmap_Milestones.md, dev/Tracker_V1_Checklist.md
+- updated: 2026-07-31 (codex)
+- 停點: 僅 Codex integration：agent projection manifest 已由 `init-codex 0.4.1` refresh 並 commit `81a7e8b`，未 push；未動或執行 application／pipeline／script／test／data／business docs。A3 G1–G7 全數取得預期訊號：2 個 dynamic prompt、4 個 reviewed refusal、deterministic render、token-level filter、0.60 threshold 與 no-TOML 均符合契約。
+- 下一步: 由 Claude 依 A3 acceptance authority 獨立重跑 G1 並 review manifest；本專案既有 product 工作狀態不變。
+- 切入: .codex/resource-projections.json, .claude/agents/data-visualization.md, dev/HANDOFF.md
