@@ -1,4 +1,4 @@
-- updated: 2026-07-31 (codex)
-- 停點: 僅 Codex integration：agent projection manifest 已由 `init-codex 0.4.1` refresh 並 commit `81a7e8b`，未 push；未動或執行 application／pipeline／script／test／data／business docs。A3 G1–G7 全數取得預期訊號：2 個 dynamic prompt、4 個 reviewed refusal、deterministic render、token-level filter、0.60 threshold 與 no-TOML 均符合契約。
-- 下一步: 由 Claude 依 A3 acceptance authority 獨立重跑 G1 並 review manifest；本專案既有 product 工作狀態不變。
-- 切入: .codex/resource-projections.json, .claude/agents/data-visualization.md, dev/HANDOFF.md
+- updated: 2026-08-01 (claude)
+- 停點: 僅 Codex integration。A3 已於 2026-07-31 結案（G1–G7 全過，Claude 獨立重跑 G1 一致、G2 stdout SHA-256 `555bee2d…` 逐字元相同、G3 抽驗 exit 2）；manifest 為 `init-codex 0.4.1`，`81a7e8b`＋`e327b27` 已 push，工作樹 clean、`--check` exit 0（4 個既知非阻斷 `AGENT_PENDING_REVIEWED_PROJECTION`：`react-specialist`／`frontend-architect`／`qa-automation` 為 `NO_SAFE_SECTION`、`code-reviewer` 為 `RETAINED_RATIO_BELOW_THRESHOLD` 0.2415 —— **這四個被擋下是正確行為，不是待修缺陷**）。本專案 application／pipeline／script／test／data／business docs 一律未動、工作狀態不變。
+- 下一步: A5 Pilot E2E 主驗收的 **Toolkit 副任務**（規範＝`codex op/dev/Audit_claude_a5_acceptance_spec_20260801.md`，使用者已於 2026-08-01 確認任務範圍）：以 `init-codex --render-agent data-visualization.md` 取得 dynamic prompt（該 agent `retained_ratio=0.7005`，在門檻之上），**實際依該 prompt 產出一小段成果**並寫入本專案 `dev/Reference_codex_integration.md` —— 重點是證明 dynamic prompt 不只能 render、還能被實際使用，產出物須可追溯到該 prompt 的角色定位。使用 resource 前先跑 `init-codex --check`；prompt 不得落地成檔案；收工走 `codex-wrap-up`。**本 repo 為 PUBLIC，commit 後停手不 push**，push 另行確認。
+- 切入: dev/Reference_codex_integration.md, .codex/resource-projections.json, .claude/agents/data-visualization.md
