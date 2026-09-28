@@ -3,6 +3,7 @@
 Flat scratchpad for cross-session debugging notes (no `Prefix_` naming — see `~/.claude/CLAUDE.md` §5 exceptions).
 
 > Global technotes pointers: `~/.claude/technotes/windows.md`、`~/.claude/technotes/git.md`（SSOT 在池，本檔不複製池內容）
+> Global knowledge pointers: 無適配 domain
 
 ## 2026-07-03 — A14 (metabase MCP fix) not applicable to this project
 

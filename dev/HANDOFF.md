@@ -1,4 +1,0 @@
-- updated: 2026-08-01 (codex)
-- 停點: A5 Toolkit integration guide complete; data-visualization dynamic prompt was rendered, hash-verified, and used by an isolated subagent; the prompt was not persisted.
-- 下一步: Claude performs A5-12 fresh-session discovery review; this public repo must not be pushed without separate authorization and a clean outgoing leak scan.
-- 切入: dev/Reference_codex_integration.md, dev/HANDOFF.md
