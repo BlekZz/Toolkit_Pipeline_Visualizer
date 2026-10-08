@@ -1,0 +1,29 @@
+{
+  "schema": "bench-lock/v1",
+  "items": {
+    "agent:code-reviewer": {
+      "source": "coldbench/agents/bench_awesome-toolkit/code-reviewer.md",
+      "bench_commit": "0df2c9e9bb0094f9133cc504f28eb15e97a3f093",
+      "content_hash": "bl1:5e14ed188b2e51e0d544069b8d28b1beeab45746673f842c9f7545288df521da",
+      "synced_at": "2026-10-08T14:38:20.155Z",
+      "pinned": false,
+      "acked": null
+    },
+    "agent:data-visualization": {
+      "source": "coldbench/agents/bench_awesome-toolkit/data-visualization.md",
+      "bench_commit": "0df2c9e9bb0094f9133cc504f28eb15e97a3f093",
+      "content_hash": "bl1:4038f78805eb0e44bb39ccae33a21b0f4010fd0674034e25d9d0e000b29c5400",
+      "synced_at": "2026-10-08T14:38:20.155Z",
+      "pinned": false,
+      "acked": null
+    },
+    "agent:technical-writer": {
+      "source": "coldbench/agents/bench_awesome-toolkit/technical-writer.md",
+      "bench_commit": "0df2c9e9bb0094f9133cc504f28eb15e97a3f093",
+      "content_hash": "bl1:d5928d17696eec12dbb966262c3cf501a93d3af7981c901be8e76900fb8e8a29",
+      "synced_at": "2026-10-08T14:38:20.155Z",
+      "pinned": false,
+      "acked": null
+    }
+  }
+}
