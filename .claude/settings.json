@@ -1,9 +1,4 @@
 {
-  "enabledPlugins": {
-    "pm-execution@github-phuryn": true,
-    "pm-ai-shipping@github-phuryn": true,
-    "pm-product-discovery@github-phuryn": true
-  },
   "hooks": {
     "PostToolUse": [
       {
@@ -27,5 +22,10 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "pm-execution@pm-skills": true,
+    "pm-ai-shipping@pm-skills": true,
+    "pm-product-discovery@pm-skills": true
   }
 }
