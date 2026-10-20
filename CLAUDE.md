@@ -157,7 +157,7 @@ All other agents in `~/.claude/agents/bench_*/` should be treated as inactive.
 |-------|------|-------|--------|
 | React Specialist | react-specialist.md | bench_awesome-toolkit | Core stack: React + TypeScript + Vite + FullCalendar UI implementation |
 | Data Visualization | data-visualization.md | coldbench/agents/bench_awesome-toolkit/data-visualization.md | Pipeline visualizer's core purpose — interactive dashboards, D3/Chart.js-style rendering |
-| Code Reviewer | code-reviewer.md | bench_awesome-toolkit | TypeScript type correctness, normalization logic, Zod/Ajv schema quality |
+| Code Reviewer | code-reviewer.md | coldbench/agents/bench_awesome-toolkit/code-reviewer.md | TypeScript type correctness, normalization logic, Zod/Ajv schema quality |
 | Frontend Architect | frontend-architect.md | bench_awesome-toolkit | Calendar UI layout, CSS system, accessibility, filter panel component architecture |
 | Technical Writer | technical-writer.md | coldbench/agents/bench_awesome-toolkit/technical-writer.md | README, JSON schema docs, AI output contract documentation |
 | QA Automation | qa-automation.md | bench_awesome-toolkit | Visual QA for calendar renders, filter behavior, detail panel correctness |
