@@ -1,0 +1,26 @@
+{
+  "schema": "library-project-activation-receipt/v1",
+  "id": "migrate-20261019-31-technical-writer-r2",
+  "operation": "migrate-source",
+  "sourceRepo": "git@github.com:BlekZz/Private_Blake_OS_Hub.git",
+  "sourceCommit": "7463b2a786edc663dc03d0fc3bcfcf57bce1d986",
+  "source": "coldbench/agents/bench_awesome-toolkit/technical-writer.md",
+  "sourceTreeSha256": "8f4f411ea364c9d7f6a85e184a66909b485135b2df7811ad6812d44b0d1585c8",
+  "beforeTreeSha256": "8f4f411ea364c9d7f6a85e184a66909b485135b2df7811ad6812d44b0d1585c8",
+  "afterTreeSha256": "8f4f411ea364c9d7f6a85e184a66909b485135b2df7811ad6812d44b0d1585c8",
+  "migration": {
+    "oldRepo": "git@github.com:BlekZz/Private_Claude_Sync.git",
+    "oldCommit": "0df2c9e9bb0094f9133cc504f28eb15e97a3f093",
+    "oldSource": "coldbench/agents/bench_awesome-toolkit/technical-writer.md",
+    "oldRawTreeSha256": "8f4f411ea364c9d7f6a85e184a66909b485135b2df7811ad6812d44b0d1585c8",
+    "newRepo": "git@github.com:BlekZz/Private_Blake_OS_Hub.git",
+    "newCommit": "7463b2a786edc663dc03d0fc3bcfcf57bce1d986"
+  },
+  "projectionStatus": "not-run",
+  "files": [
+    {
+      "path": ".claude/agents/technical-writer.md",
+      "sha256": "ac4aff7bbbb96a8841d97224335f37d517fd33ed8046c2216b5267236bd2f38a"
+    }
+  ]
+}

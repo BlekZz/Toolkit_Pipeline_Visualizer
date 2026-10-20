@@ -1,0 +1,26 @@
+{
+  "schema": "library-project-activation-receipt/v1",
+  "id": "migrate-20261019-30-data-visualization-r2",
+  "operation": "migrate-source",
+  "sourceRepo": "git@github.com:BlekZz/Private_Blake_OS_Hub.git",
+  "sourceCommit": "7463b2a786edc663dc03d0fc3bcfcf57bce1d986",
+  "source": "coldbench/agents/bench_awesome-toolkit/data-visualization.md",
+  "sourceTreeSha256": "98dfab4dba14825fbc2948171c72f48cc61733dde21472193ff5b18eca6a8c8e",
+  "beforeTreeSha256": "98dfab4dba14825fbc2948171c72f48cc61733dde21472193ff5b18eca6a8c8e",
+  "afterTreeSha256": "98dfab4dba14825fbc2948171c72f48cc61733dde21472193ff5b18eca6a8c8e",
+  "migration": {
+    "oldRepo": "git@github.com:BlekZz/Private_Claude_Sync.git",
+    "oldCommit": "0df2c9e9bb0094f9133cc504f28eb15e97a3f093",
+    "oldSource": "coldbench/agents/bench_awesome-toolkit/data-visualization.md",
+    "oldRawTreeSha256": "98dfab4dba14825fbc2948171c72f48cc61733dde21472193ff5b18eca6a8c8e",
+    "newRepo": "git@github.com:BlekZz/Private_Blake_OS_Hub.git",
+    "newCommit": "7463b2a786edc663dc03d0fc3bcfcf57bce1d986"
+  },
+  "projectionStatus": "not-run",
+  "files": [
+    {
+      "path": ".claude/agents/data-visualization.md",
+      "sha256": "ae5a4b4f4db735ba1841061402c3f4498f0a4c1474383b11fb303bbc01800872"
+    }
+  ]
+}

@@ -9,21 +9,23 @@
       "pinned": false,
       "acked": null
     },
-    "agent:data-visualization": {
+    "agent:bench_awesome-toolkit/data-visualization": {
       "source": "coldbench/agents/bench_awesome-toolkit/data-visualization.md",
-      "bench_commit": "0df2c9e9bb0094f9133cc504f28eb15e97a3f093",
+      "bench_commit": "619ff5769d077cb49f29c829117ba7639cb08b7e",
       "content_hash": "bl1:4038f78805eb0e44bb39ccae33a21b0f4010fd0674034e25d9d0e000b29c5400",
-      "synced_at": "2026-10-08T14:38:20.155Z",
+      "synced_at": "2026-10-15T14:21:07+08:00",
       "pinned": false,
-      "acked": null
+      "acked": null,
+      "source_repo": "git@github.com:BlekZz/Private_Blake_OS_Hub.git"
     },
-    "agent:technical-writer": {
+    "agent:bench_awesome-toolkit/technical-writer": {
       "source": "coldbench/agents/bench_awesome-toolkit/technical-writer.md",
-      "bench_commit": "0df2c9e9bb0094f9133cc504f28eb15e97a3f093",
+      "bench_commit": "619ff5769d077cb49f29c829117ba7639cb08b7e",
       "content_hash": "bl1:d5928d17696eec12dbb966262c3cf501a93d3af7981c901be8e76900fb8e8a29",
-      "synced_at": "2026-10-08T14:38:20.155Z",
+      "synced_at": "2026-10-15T14:21:07+08:00",
       "pinned": false,
-      "acked": null
+      "acked": null,
+      "source_repo": "git@github.com:BlekZz/Private_Blake_OS_Hub.git"
     }
   }
 }
